@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "borgctl"
-version = "0.4.0a6"
+version = "0.4.0a7"
 description = ""
 authors = ["kmille <github@androidloves.me>"]
 readme = "README.md"

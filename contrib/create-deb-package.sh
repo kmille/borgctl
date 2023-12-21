@@ -1,6 +1,7 @@
 #!/bin/bash
 set -eu
 
+rm -rf *.deb
 sudo rm -rf template && mkdir template
 
 
@@ -35,8 +36,8 @@ Description: wrapper around borg backup
 function step3() {
     mkdir -p template/root/usr/lib/python3/dist-packages/
     poetry build --format wheel
-    unzip -qo dist/borgctl-*.whl -d template/root/usr/lib/python3/dist-packages/
-    rm -rf dist
+    unzip -qo ../dist/borgctl-*.whl -d template/root/usr/lib/python3/dist-packages/
+    #rm -rf ../dist
 
     mkdir -p template/root/usr/bin
     echo '#!/usr/bin/python3
@@ -64,7 +65,5 @@ create_deb
 
 rm -rf control.tar.xz data.tar.xz
 sudo rm -rf template
-
-wormhole send borgctl_0.4.0a0-1_amd64.deb
 
 echo "done"

@@ -4,11 +4,33 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 PACKAGE=$(poetry version | awk '{ print $1 }')
+DEPLOY_PRE_RELEASE="1"
+SKIP_PREREQUISITES="0"
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -p|--prod)
+      DEPLOY_PRE_RELEASE="0"
+      shift # past argument
+      ;;
+    -s|--skip-prerequisites)
+      SKIP_PREREQUISITES="1"
+      shift # past argument
+      ;;
+  esac
+done
+
 
 # install dev environment
 poetry install
 
 function check_prerequisites() {
+
+    if [[ $SKIP_PREREQUISITES == "1" ]]
+    then
+        return
+    fi
+
     if [ -n "$(git status --untracked-files=no --porcelain)" ]; then
       echo "Working directory is not clean. Please commit all changes first"
       exit 1
@@ -22,13 +44,28 @@ function check_prerequisites() {
 
 
 function bump_version() {
-    
-    #poetry version patch
-    poetry version prerelease
+    if [[ $DEPLOY_PRE_RELEASE == "0" ]]
+    then
+        bump_version_prod
+    else
+        bump_version_prerelease
+    fi
 
+}
+
+function bump_version_prerelease() {
+    poetry version prerelease
     VERSION=$(poetry version -s)
     git add ../pyproject.toml && git commit -m "Bump to v$VERSION" --no-verify && git push
     gh release create $VERSION --generate-notes --prerelease
+}
+
+
+function bump_version_prod() {
+    poetry version patch
+    VERSION=$(poetry version -s)
+    git add ../pyproject.toml && git commit -m "Bump to v$VERSION" --no-verify && git push
+    gh release create $VERSION --generate-notes
 }
 
 
@@ -44,14 +81,7 @@ function create_debian_package () {
 }
 
 
-function cleanup() {
-    rm -rf ../dist/
-    rm borgctl_$VERSION-1_amd64.deb
-}
-
-
-function arch_package() {
-    # Update arch package
+function create_arch_package() {
     pushd ArchLinux >/dev/null
 
     SHA265SUMS=$(makepkg --geninteg 2>/dev/null)
@@ -63,11 +93,17 @@ function arch_package() {
     popd > /dev/null
 }
 
+
+function cleanup() {
+    rm -rf ../dist/
+    rm borgctl_$VERSION-1_amd64.deb
+}
+
 check_prerequisites
 bump_version
 build_and_upload_python_package
 create_debian_package
-arch_package
+create_arch_package
 cleanup
 
 echo "done"

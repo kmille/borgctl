@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "borgctl"
+version = "0.4.0a0"
+description = ""
+authors = ["kmille <github@androidloves.me>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+ruamel-yaml = "^0.18.5"
+
+
+[tool.poetry.group.dev.dependencies]
+pdbpp = "^0.10.3"
+mypy = "^1.7.1"
+stdeb = "^0.10.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+borgctl = "borgctl.__init__:main"
+
+[tool.setuptools.package-data]
+borgctl = ["default.yml.template"]

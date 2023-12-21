@@ -1,0 +1,5 @@
+TODOs
+__pacache__
+.mypy_cache
+*.deb
+

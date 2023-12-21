@@ -35,6 +35,7 @@ state_commands:
 - "prune"
 
 # https://borgbackup.readthedocs.io/en/stable/usage/general.html#environment-variables
-envs: {}
+envs:
+  "BORG_RELOCATED_REPO_ACCESS_IS_OK": "yes"
 
 borg_binary: "/usr/bin/borg"

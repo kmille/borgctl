@@ -72,7 +72,7 @@ def execute_borg(cmd: list[str], env: dict) -> int:
     #    sys.exit(e.returncode)
 
 
-def run_borg_command(command: str, env: list[str], config: dict, args: list[str]):
+def run_borg_command(command: str, env: dict[str, str], config: dict, args: list[str]):
     cmd = [config["borg_binary"], "--verbose", command]
     if command == "create":
         args = prepare_borg_create(config, args)

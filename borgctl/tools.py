@@ -99,7 +99,12 @@ def generate_authorized_keys(config: dict) -> NoReturn:
         print(f"\nUse this line for restricted access:\n{restricted}")
         #print("Also useful in 'borg serve' is --append-only and --storage-quota")
 
-        remote_authorized_keys = Path(f"~{user}").expanduser().as_posix() + "/.ssh/authorized_keys"
+        try:
+            user_home_dir = Path(f"~{user}").expanduser().as_posix()
+        except RuntimeError:
+            user_home_dir = f"/home/{user}"
+
+        remote_authorized_keys = user_home_dir + "/.ssh/authorized_keys"
         remote_command = f"""echo -e '{restricted}\\n' | ssh {host} 'cat >> {remote_authorized_keys}'"""
         print(f"\nOr this one-in-all command:\n{remote_command}")
     sys.exit(0)

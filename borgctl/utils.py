@@ -3,14 +3,20 @@ from pathlib import Path
 import datetime
 import sys
 from ruamel.yaml import YAML, YAMLError
+import logging
 
 BORG_COMMANDS = [
-    "list", "create", "check", "compact", "prune", "mount", "umount", "init", "break-lock", "info",
+    # TODO: sort alphabetly
+    "list", "create", "check", "compact", "prune", "mount", "umount", "init", "break-lock", "info", "diff", "delete", "upgrade", "import-tar", "export-tar", "config",
+    # TODO: commands => links
+    # import-tar => tar
+    #https://borgbackup.readthedocs.io/en/stable/usage/tar.html#borg-export-tar
+    #https://borgbackup.readthedocs.io/en/stable/usage/lock.html#borg-break-lock
 ]
 
 
 def fail(msg: str, code: int = 1):
-    print(f"Error: {msg}")
+    logging.error(msg)
     sys.exit(code)
 
 
@@ -88,14 +94,11 @@ def check_config(config: dict):
 
 
 def load_config(config_file: Path):
-    print(f"Using config file {config_file}")
+    logging.debug(f"Using config file {config_file}")
     if not config_file.exists():
         fail(f"Could not load config file {config_file}\nPlease use --generate-default-config to create a default config")
 
     yaml = YAML(typ="safe")
-    # TODO: do we need this?
-    #yaml.preserve_quotes = True
-    #yaml.default_flow_style = False
     try:
         config = yaml.load(config_file)
     except YAMLError as e:
@@ -112,19 +115,13 @@ def load_config(config_file: Path):
         "BORG_LOGGING_CONF": (get_conf_directory() / "logging.conf").as_posix(),
     }
 
-    # TODO: only if ssh_key is not empty
-    if config["envs"]:
-        env.update(config["envs"])
-
-    if "BORG_RSH" in env:
-        fail("Could not set ssh key... you have to manually set it vai RSH")
-
     if config["ssh_key"] != "":
         env.update({
             "BORG_RSH": f"ssh -i {config['ssh_key']}",
         })
-    #for e in y["envs"]:
-    #e.update(
+        if "BORG_RSH" in config["envs"]:
+            logging.warning("Could not set ssh key via BORG_RSH. You have to specify it manually it via RSH")
+    env.update(config["envs"])
 
     return env, config
 
@@ -158,7 +155,7 @@ level=INFO
 args=(sys.stdout,)
 
 [formatter_simple]
-format=%(asctime)s %(levelname)s %(message)s
+format=%(asctime)s %(levelname)5s %(message)s
 datefmt=
 class=logging.Formatter"""
 
@@ -166,3 +163,9 @@ class=logging.Formatter"""
 
     if not logging_file_location.exists():
         logging_file_location.write_text(logging_config)
+
+
+def get_new_archive_name(config: dict) -> str:
+    now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    archive = "::" + config["prefix"] + "_" + now
+    return archive

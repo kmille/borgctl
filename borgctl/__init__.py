@@ -4,18 +4,24 @@ import subprocess
 import sys
 import datetime
 from getpass import getpass
+import logging
+import logging.config
 
 from borgctl.utils import write_state_file, get_conf_directory, \
-    load_config, BORG_COMMANDS, fail, write_logging_config
+    load_config, BORG_COMMANDS, fail, write_logging_config, get_new_archive_name
 
 from borgctl.tools import show_version, handle_ssh_key, generate_authorized_keys, generate_default_config
 
 
-#logger = None
+logger = None
 #file_logger = None
 
 
-#def init_logging(config_file: str):
+def init_logging(config_file: str):
+    config_file = get_conf_directory() / "logging.conf"
+    if config_file.exists():
+        logging.config.fileConfig(config_file)
+
 #    global logger, file_logger
 #    logger = logging.getLogger("console")
 #    logger.setLevel(logging.INFO)
@@ -64,6 +70,7 @@ def execute_borg(cmd: list[str], env: dict) -> int:
         if p.returncode != 0:
             print(f"borg failed with exit code: {p.returncode}")
         return p.returncode
+        
 
     #except subprocess.CalledProcessError as e:
     #    print(f"borg failed with exit code: {e.returncode}: {e.stderr}")
@@ -72,10 +79,14 @@ def execute_borg(cmd: list[str], env: dict) -> int:
     #    sys.exit(e.returncode)
 
 
-def run_borg_command(command: str, env: dict[str, str], config: dict, args: list[str]):
+def run_borg_command(command: str, env: dict[str, str], config: dict, config_file: str, args: list[str]):
     cmd = [config["borg_binary"], "--verbose", command]
     if command == "create":
         args = prepare_borg_create(config, args)
+    elif command == "import-tar":
+        cmd.append(get_new_archive_name(config))
+    elif command == "config":
+        cmd.append(config["repository"])
 
     key_config_file = f"borg_{command}_arguments"
     if key_config_file in config:
@@ -95,14 +106,32 @@ def run_borg_command(command: str, env: dict[str, str], config: dict, args: list
         if not arg.startswith("-"):
             cmd.append(arg)
 
-    if "mount" in command:
-        cmd.append(config["mount_point"])
-        if len(args) == 0 and command == "mount":
+    if command == "umount":
+        if len(args) == 0:
+            mount_point = Path(config["mount_point"]).expanduser().as_posix()
+            cmd.append(mount_point)
+    elif command == "mount":
+        if len(args) == 0:
+            # just mount: add :: (latest archive) and mount point
             cmd.append("::")
+            mount_point = Path(config["mount_point"]).expanduser().as_posix()
+            cmd.append(mount_point)
+        elif len(args) == 1:
+            # mount ::archive: only add mount point
+            mount_point = Path(config["mount_point"]).expanduser().as_posix()
+            cmd.append(mount_point)
     elif command == "init":
         cmd.append(config["repository"])
+    elif command == "export-tar":
+        if len(args) < 2:
+            fail("The export-tar command needs two arguments (plus optional parameters like --tar-filter): ::archive <outputfile>")
+        if len(args) == 1:
+            cmd.append("::")
 
-    return execute_borg(cmd, env)
+    return_code = execute_borg(cmd, env)
+    if return_code == 0 and not ("--dry-run" in cmd or "-s" in cmd or "--help" in cmd):
+        write_state_file(config, config_file, command)
+    return return_code
 
 
 def prepare_borg_create(config: dict, cli_arguments: list[str]) -> list[str]:
@@ -111,10 +140,7 @@ def prepare_borg_create(config: dict, cli_arguments: list[str]) -> list[str]:
     for exclude in config["borg_create_excludes"]:
         p = Path(exclude).expanduser()
         arguments.append(f"--exclude={p.as_posix()}")
-
-    now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    archive = "::" + config["prefix"] + "_" + now
-    arguments.append(archive)
+    arguments.append(get_new_archive_name(config))
 
     for backup_dir in config["borg_create_backup_dirs"]:
         p = Path(backup_dir).expanduser()
@@ -130,12 +156,12 @@ def prepare_borg_create(config: dict, cli_arguments: list[str]) -> list[str]:
 def run_cron_commands(config: dict, env: dict, config_file: str):
     return_code = 0
     for command in config["cron_commands"]:
-        print(f"Running borg {command} in --cron mode")
-        ret = run_borg_command(command, env, config, [])
-        if ret == 0:
-            write_state_file(config, config_file, command)
+        print(f"Running 'borg {command}' in --cron mode")
+        ret = run_borg_command(command, env, config, config_file, [])
         if ret > return_code:
             return_code = ret
+    if return_code != 0:
+        print(f"Returning with exit code {return_code}")
     sys.exit(return_code)
 
 
@@ -177,7 +203,7 @@ The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME or ~/.local/s
     elif args.version:
         show_version()
 
-    #init_logging(args.config)
+    init_logging(args.config)
     write_logging_config()
     args.config = ["default.yml", ] if not args.config else args.config
 
@@ -198,13 +224,11 @@ The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME or ~/.local/s
             elif args.cron:
                 run_cron_commands(config, env, config_file)
             elif "help" in borg_cli_arguments:
-                run_borg_command(args.command, env, config, ["--help", ])
+                run_borg_command(args.command, env, config, config_file, ["--help", ])
                 print(f"Check out the docs: https://borgbackup.readthedocs.io/en/stable/usage/{args.command}.html")
                 sys.exit(0)
             elif args.command:
-                ret = run_borg_command(args.command, env, config, borg_cli_arguments)
-                if ret == 0:
-                    write_state_file(config, config_file, args.command)
+                ret = run_borg_command(args.command, env, config, config_file, borg_cli_arguments)
                 if ret > return_code:
                     return_code = ret
             else:

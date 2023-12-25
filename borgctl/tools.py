@@ -54,7 +54,6 @@ def handle_ssh_key(config: dict, config_file: Path) -> NoReturn:
 
     if not ssh_key_location.exists():
         generate_ssh_key(ssh_key_location)
-        #generate_authorized_keys(config)
     else:
         print(f"Warning: ssh key {ssh_key_location} already exists. Not overwriting")
     update_config(ssh_key_location.as_posix(), config_file)
@@ -73,10 +72,6 @@ def parse_borg_repository(repository: str):
         if "@" in host:
             user, host = host.split("@")
     return user, host, repo_dir
-
-
-#print(parse_borg_repository("ssh://userr@hostt:/opt/backup"))
-#print(parse_borg_repository("ssh://userr@hostt:/opt/backup"))
 
 
 def generate_authorized_keys(config: dict) -> NoReturn:

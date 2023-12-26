@@ -3,7 +3,7 @@
 pkgname=borgctl
 pkgver=$(poetry version -s)
 pkgrel=1
-pkgdesc="TODO:"
+pkgdesc="borgctl - borgbackup without writing bash scripts"
 arch=('any')
 url="https://github.com/kmille/borgctl"
 license=('GPL3')

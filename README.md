@@ -1,21 +1,23 @@
-# borgctl - wrapper around borgbackup
+## borgctl - borgbackup without writing bash scripts
 
-## Overview
-[borgbackup](https://www.borgbackup.org/) is cool and easy to use. But we all end up writing bash scripts for creating/listing/pruning backups. borgctl is a borg wrapper that uses a yaml configuration file to make life a bit easier.
+[borgbackup](https://www.borgbackup.org/) is cool and easy to use. But we all end up writing bash scripts for creating/listing/pruning backups. borgctl is a borg wrapper that uses yaml configuration files to make life a bit easier.
 
 ## Features
-- Support for configuration files. Specify what to backup and where to backup
-- Just call `borgctl create`, `borgctl list`, `borgctl prune`
-- Use multiple configuration files to be flexible (e. g. multiple remote backends or run `borg create` in append-only-mode and prune/compact with Yubikey)
-- Ask the user for the borg passphrase (if you don't want to store it on disk). Re-use the entered password for other remote storage locations (you don't have to re-enter it again)
-- Some helpers to auto-generate ssh keys and show the authorized_keys entry (with restricted access)
+- Support for yaml configuration files. Specify what to backup and where to backup
+- Just call `borgctl create`, `borgctl list`, `borgctl prune`, ...
+- Use multiple configuration files to be flexible (e. g. if you want to backup to multiple remote backends or to run `borg create` in append-only-mode and prune/compact with a Yubikey)
+- Ask the user for the borg passphrase (if you don't want to store it on disk). Re-use the entered password for other remote storage backends (you don't have to re-enter it again)
+- Some helpers to auto-generate ssh keys and print the authorized_keys entry (with restricted access)
 - Run multiple borg commands by running  `borgctl --cron` (commands can be specified in the config file)
 - Write a state file (text file with current timestamp in) after successfully executing borg commands (can be used for monitoring)
-- Write a log file
+- Write everything in a log file
+- Easy to install, deploy and use
+
+There is also [borgmagic](https://torsion.org/borgmatic/), but it can not handle all my use cases.
 
 ## Quickstart
 
-- ascinema
+- TODO: ascinema
 
 ## Usage
 
@@ -25,7 +27,7 @@ Running borgctl 0.4.2
 
 kmille@linbox:~ sudo borgctl --help   
 usage: borgctl [-h] [-d] [-s] [-a] [-c CONFIG] [--cron] [--version]
-               {list,create,check,compact,prune,mount,umount,init,break-lock,info,diff,delete,upgrade,import-tar,export-tar,config} ...
+               {break-lock,check,compact,config,create,delete,diff,export-tar,import-tar,info,init,list,mount,prune,umount,upgrade} ...
 
 borgctl is a simple wrapper around borgbackup. The working directory is /etc/borgctl for root or XDG_CONFIG_HOME/borgctl or ~/.config/borgctl for non-root users. The
 log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME or ~/.local/state/borgctl for non-root users.
@@ -51,7 +53,7 @@ kmille@linbox:~
 
 ## Installation
 
-You can find the latest release on the [Github Release](https://github.com/kmille/borgctl/releases) page. There are different ways to get borgctl up and running
+You can find the latest release on the [Github Release](https://github.com/kmille/borgctl/releases) page. There are different ways to get borgctl up and running.
 
 #### Use the [PyPi](https://pypi.org/project/borgctl/) package with
 
@@ -61,7 +63,7 @@ pip install borgctl
 
 The source and binary package can also be found on the Release page (*.whl and *.tar.gz)
 
-#### Use the Debian package with
+#### Use the Debian package
 
 Install the latest package with:
 
@@ -83,15 +85,15 @@ You can also download borgctl-*any.pkg.tar.zst and install it with `pacman -U`.
 
 ## Default location for config files and logging
 
-borgctl uses config files. If you run `borgctl`, it expects a default.yml in the config directory. You can specify one or more config files with `-c`/`--config`. If the config file contains a /, the path is interpreted as relative/absolute path. There is also a logging configuration (logging.conf) stored, which is used by borgctl and borg itself.
+borgctl uses config files. If you run `borgctl`, it expects a default.yml in the config directory. You can specify one or more config files with `-c`/`--config`. If the config file contains a /, the config file is interpreted as relative/absolute path. There is also a logging configuration (logging.conf) stored, which is used by borg and borgctl itself.
 
-- Default config location for root user: /etc/borgctl
+- Default config location for root user: `/etc/borgctl`
 
 - Default config location for non-root users: `$XDG_CONFIG_HOME/borgctl` or `~/.config/borgctl`
 
 The output of borg and borgctl will be written to borg.log. The file gets logrotated automatically.
 
-- Default log directory for root user: /var/log/borgctl/
+- Default log directory for root user: `/var/log/borgctl/`
 - Default log directory for non-root users: `$XDG_STATE_HOME/borgctl` or `~/.local/state/borgctl`
 
 The state files are also written to the log directory.
@@ -111,9 +113,7 @@ root@linbox:~ borgctl --generate-default-config
 2023-12-26 10:59:28,112  INFO Successfully wrote config file to /etc/borgctl/default.yml
 ```
 
-`/etc/borgctl/default.yml`is just a copy of the [default config file](https://github.com/kmille/borgctl/blob/main/borgctl/default.yml.template). It generates a diceware password for the borg passphrase and uses the hostname as borg prefix. Then, update the config file (repository, ssh_key, what to backup (borg_create_backup_dirs and borg_create_excludes).
-
-borgctl can generate a ssh key for you:
+`/etc/borgctl/default.yml`is just a copy of the [default config file](https://github.com/kmille/borgctl/blob/main/borgctl/default.yml.template). A new diceware password for the borg passphrase is generated. The hostname is used as borg prefix. borgctl can generate a ssh key for you:
 
 ```bash
 root@linbox:~ borgctl --generate-ssh-key
@@ -127,7 +127,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINpVZZjIAzeyGq0oLKVeLzEECoe7RXg6YpAcPIsakboF
 
 If you specify a ssh key in the config file, it will be used as output file (if it does not exist). If not, the default name for the ssh key is `$current_username_borg_$config_prefix`.
 
-borgctl can generate you ssh key entry for authorized_keys:
+borgctl can also generate your authorized_keys entry:
 
 ```bash
 root@linbox:~ borgctl --generate-authorized_keys
@@ -144,7 +144,7 @@ echo -e 'command="borg serve --restrict-to-path /opt/test-backup",restrict ssh-e
 
 ```
 
-Now you can create your first backup:
+Please update the config file (what to backup (borg_create_backup_dirs and borg_create_excludes and where to backup (repository)). Then you can create your first backup:
 
 ```bash
 root@linbox:~ borgctl create
@@ -177,7 +177,7 @@ root@linbox:~ ls /var/log/borgctl/borg.log
 -rw-r--r-- 1 root root 11K Dec 26 11:12 /var/log/borgctl/borg.log
 ```
 
-The executed borg command is also printed to stderr. You can adjust the parameters, borgctl uses. For example you can add `--json /usr/local/bin/`, which will be added to borg:
+The executed borg command is also printed to stderr. You can adjust the parameters borgctl uses. For example you can add `--json /usr/local/bin/`, which will be added to borg:
 
 ```bash
 root@linbox:~ borgctl create --json /usr/local/bin 
@@ -193,7 +193,7 @@ r/bin /usr/local/bin
 ...
 ```
 
-For every borg command, you can add default command line parameter/arguments in the config file by specifying `borg_$borg_command_arguments`:
+For every borg command, you can add default command line parameter/arguments in the config file by specifying `borg_$borgcommand_arguments`. These are the default for the create command:
 
 ```yaml
 borg_create_arguments:
@@ -233,7 +233,7 @@ drwxr-xr-x root   root          0 Tue, 2023-12-26 10:56:58 usr/bin
 ...
 ```
 
-In your daily use, you often want to create a backup, prune old backups and then compact the disk usage. You can use borgctl --cron for that:
+In your daily use, you often want to create a backup, prune old backups and then compact the disk space. You can use borgctl --cron for that:
 
 ```bash
 root@linbox:~ borgctl --cron
@@ -259,6 +259,8 @@ root@linbox:~ borgctl --cron
 2023-12-26 11:22:08,250  INFO Chunk index:                    4338                17312
 2023-12-26 11:22:08,250  INFO ------------------------------------------------------------------------------
 2023-12-26 11:22:08,338  INFO Updated state file /var/log/borgctl/borg_state_default_create.txt
+
+
 2023-12-26 11:22:08,338  INFO Running 'borg prune' in --cron mode
 2023-12-26 11:22:08,338  INFO Executing: BORG_REPO="/root/borg-repo" BORG_LOGGING_CONF="/etc/borgctl/logging.conf" BORG_RSH="ssh -i /root/.ssh/borg_default" BORG_RELOCATED_REPO_ACCESS_IS_OK="yes" /usr/bin/borg --verbose prune --list --keep-last 10
 2023-12-26 11:22:08,898  INFO Keeping archive (rule: secondly #1):     linbox_2023-12-26_11:22:06           Tue, 2023-12-26 11:22:07 [9be95c7822b2e195fbcdfa63787d20ceb13ba04a7d560d627f2f92941e1dc23e]
@@ -266,13 +268,15 @@ root@linbox:~ borgctl --cron
 2023-12-26 11:22:08,898  INFO Keeping archive (rule: secondly #3):     linbox_2023-12-26_11:15:42           Tue, 2023-12-26 11:15:43 [4599ac310b99703407600bc8bfa58ddb80da7be3d613b49fdf75691b99d293e0]
 2023-12-26 11:22:08,898  INFO Keeping archive (rule: secondly #4):     linbox_2023-12-26_11:11:35           Tue, 2023-12-26 11:11:35 [079e9c226455ff1b816be986bf49029c3cdf28ec04e9f6bf2d387ea9a4f24d87]
 2023-12-26 11:22:08,969  INFO Updated state file /var/log/borgctl/borg_state_default_prune.txt
+
+
 2023-12-26 11:22:08,970  INFO Running 'borg compact' in --cron mode
 2023-12-26 11:22:08,970  INFO Executing: BORG_REPO="/root/borg-repo" BORG_LOGGING_CONF="/etc/borgctl/logging.conf" BORG_RSH="ssh -i /root/.ssh/borg_default" BORG_RELOCATED_REPO_ACCESS_IS_OK="yes" /usr/bin/borg --verbose compact
 2023-12-26 11:22:09,459  INFO compaction freed about 1.48 kB repository space.
 root@linbox:~ 
 ```
 
-In the config file, you can specify which borg commands should be run, if --cron is executed:
+In the config file, you can specify which borg commands should be run if --cron is supplied:
 
 ```yaml
 cron_commands:
@@ -281,7 +285,7 @@ cron_commands:
 - "compact"
 ```
 
-bortctl also writes state files, if a borg command runs successfully. It contains the current date. You can use it for monitoring. State files are written to the log directory. The format is`borg_state__$config_file_prefix_$borg_command.txt` (e. g. borg_state_default_create.txt). In the config file you can specify a list of commands for which a state file should be created (state_commands).
+bortctl also writes state files, if a borg command runs successfully. It contains the current date. You can use it for monitoring. State files are written to the log directory. The format is`borg_state__$config_file_prefix_$borg_command.txt`. In the config file you can specify a list of commands for which a state file should be created.
 
 ```yaml
 state_commands:
@@ -289,7 +293,12 @@ state_commands:
 - "prune"
 ```
 
-In config file, you can specify the borg binary (borg_binary). You can also add environment variables. If you need help for a borg command, you can run `borgctl list help`.
+```bash
+root@linbox:~ cat /var/log/borgctl/borg_state_default_create.txt 
+2023-12-26_11:22:08
+```
+
+In config file, you can specify the borg binary (borg_binary) used for invocation. You can also add environment variables. If you need help for a borg command, you can just add `help` (like `borgctl list help`).
 
 
 

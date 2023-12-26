@@ -2,7 +2,6 @@ from pathlib import Path
 import argparse
 import subprocess
 import sys
-import datetime
 from getpass import getpass
 import logging
 import logging.config
@@ -13,70 +12,24 @@ from borgctl.utils import write_state_file, get_conf_directory, \
 from borgctl.tools import show_version, handle_ssh_key, generate_authorized_keys, generate_default_config
 
 
-logger = None
-#file_logger = None
-
-
-def init_logging(config_file: str):
+def init_logging():
     config_file = get_conf_directory() / "logging.conf"
-    if config_file.exists():
-        logging.config.fileConfig(config_file)
-
-#    global logger, file_logger
-#    logger = logging.getLogger("console")
-#    logger.setLevel(logging.INFO)
-#    logger.addHandler(logging.StreamHandler(sys.stderr))
-#
-#    config_prefix = Path(config_file).stem
-#    # TODO: rotate files
-#    file_logger = logging.getLogger("file")
-#    file_logger.setLevel(logging.INFO)
-#    file_handler = logging.FileHandler(get_log_directory() / (config_prefix + "_borg.log"))
-#    logger.addHandler(file_handler)
-#    #file_logger.addHandler(file_handler)
-#
-#    #logger.info("hi")
-#    #logger.warning("hi")
+    if not config_file.exists():
+        write_logging_config()
+    logging.config.fileConfig(config_file)
 
 
 def execute_borg(cmd: list[str], env: dict) -> int:
-    #debug_out = " ".join([f"{key}={value}" for key, value in env.items() if key != "BORG_PASSPHRASE"])
-    debug_out = " ".join([f"{key}=\"{value}\"" for key, value in env.items()])
+    debug_out = " ".join([f"{key}=\"{value}\"" for key, value in env.items() if key != "BORG_PASSPHRASE"])
     debug_out += " " + " ".join(cmd)
-    print(f"Executing: {debug_out}")
+    logging.info(f"Executing: {debug_out}")
 
-    #try:
-    #p = subprocess.run(cmd, capture_output=True, env=env, check=True)
-    # # info prints to stdout else stderr?
-    #if p.stderr.decode() != "":
-    #    print(p.stderr.decode())
-    #if p.stdout.decode() != "":
-    #    print(p.stdout.decode())
-
-    #cmd = "while true; do echo hi >&2; sleep 1; done"
-    #cmd = "while true; do echo hi; sleep 1; done"
-    # was hier geht: stderr=sys.stdout
-    # heißt der ganze shizzle geht mit stdout, aber nicht mit stderr
-    # https://stackoverflow.com/questions/4417546/constantly-print-subprocess-output-while-process-is-running
-    #with subprocess.Popen(cmd, env=env, bufsize=1,
-    #stdout=sys.stdout, universal_newlines=True,
     with subprocess.Popen(cmd, env=env, bufsize=1,
                           stdout=sys.stdout, stderr=sys.stdout) as p:
-        #for line in p.stdout:
-        #    print(line, end="")
-        #for line in p.stderr:
-        #    print(line, end="")
         p.wait()
         if p.returncode != 0:
-            print(f"borg failed with exit code: {p.returncode}")
+            logging.error(f"borg failed with exit code: {p.returncode}")
         return p.returncode
-        
-
-    #except subprocess.CalledProcessError as e:
-    #    print(f"borg failed with exit code: {e.returncode}: {e.stderr}")
-    #    print(e)
-    #    print(f"Check out the docs: https://borgbackup.readthedocs.io/en/stable/usage/{cmd[2]}.html")
-    #    sys.exit(e.returncode)
 
 
 def run_borg_command(command: str, env: dict[str, str], config: dict, config_file: str, args: list[str]):
@@ -146,7 +99,7 @@ def prepare_borg_create(config: dict, cli_arguments: list[str]) -> list[str]:
         p = Path(backup_dir).expanduser()
         arguments.append(p.as_posix())
         if not p.exists():
-            print(f"Warning: backup directory {p} does not exist")
+            logging.warning(f"Backup directory {p} does not exist")
 
     arguments.extend(cli_arguments)
 
@@ -156,12 +109,12 @@ def prepare_borg_create(config: dict, cli_arguments: list[str]) -> list[str]:
 def run_cron_commands(config: dict, env: dict, config_file: str):
     return_code = 0
     for command in config["cron_commands"]:
-        print(f"Running 'borg {command}' in --cron mode")
+        logging.info(f"Running 'borg {command}' in --cron mode")
         ret = run_borg_command(command, env, config, config_file, [])
         if ret > return_code:
             return_code = ret
     if return_code != 0:
-        print(f"Returning with exit code {return_code}")
+        logging.info(f"Returning with exit code {return_code}")
     sys.exit(return_code)
 
 
@@ -198,13 +151,12 @@ The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME or ~/.local/s
 
     args, borg_cli_arguments = parser.parse_known_args()
 
+    init_logging()
     if args.generate_default_config:
         generate_default_config()
     elif args.version:
         show_version()
 
-    init_logging(args.config)
-    write_logging_config()
     args.config = ["default.yml", ] if not args.config else args.config
 
     return_code = 0
@@ -237,7 +189,6 @@ The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME or ~/.local/s
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        raise
         fail(e)
 
 

@@ -56,11 +56,11 @@ def write_state_file(config: dict, config_file: str, command: str):
     state_file = log_dir / f"borg_state_{config_prefix}_{command}.txt"
     now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     state_file.write_text(now)
-    print(f"Updated state file {state_file}")
+    logging.info(f"Updated state file {state_file}")
 
 
 def check_config(config: dict):
-    config_keys = ['repository', 'ssh_key', 'prefix', 'passphrase', 'mount_point', 'borg_create_backup_dirs', 'borg_create_excludes', 'borg_create_arguments', 'borg_prune_arguments', 'borg_init_arguments', 'envs', 'borg_binary', 'cron_commands', 'state_commands']
+    config_keys = ['repository', 'ssh_key', 'prefix', 'passphrase', 'mount_point', 'borg_create_backup_dirs', 'borg_create_excludes', 'borg_create_arguments', 'borg_prune_arguments', 'envs', 'borg_binary', 'cron_commands', 'state_commands']
     for config_key in config_keys:
         if config_key not in config:
             fail(f"'{config_key}' not specified in config file")
@@ -86,15 +86,14 @@ def check_config(config: dict):
 
     binary = Path(config["borg_binary"])
     if not binary.exists():
-        fail(f"Warning: borg executable not found (specified in config file): {binary}")
+        fail(f"borg executable not found (specified in config file): {binary}")
 
     if type(config["envs"]) is not dict:
         fail("'envs' in config file is not a dictionary")
-    # TODO: check envs
 
 
 def load_config(config_file: Path):
-    logging.debug(f"Using config file {config_file}")
+    logging.info(f"Using config file {config_file}")
     if not config_file.exists():
         fail(f"Could not load config file {config_file}\nPlease use --generate-default-config to create a default config")
 
@@ -119,7 +118,7 @@ def load_config(config_file: Path):
         env.update({
             "BORG_RSH": f"ssh -i {config['ssh_key']}",
         })
-        if "BORG_RSH" in config["envs"]:
+        if "BORG_RSH" in config["envs"] and "-i" not in config["envs"]["BORG_RSH"]:
             logging.warning("Could not set ssh key via BORG_RSH. You have to specify it manually it via RSH")
     env.update(config["envs"])
 
@@ -152,10 +151,10 @@ args=('{log_file}', 'a',  1024**3, 1)
 class=StreamHandler
 formatter=simple
 level=INFO
-args=(sys.stdout,)
+args=(sys.stderr,)
 
 [formatter_simple]
-format=%(asctime)s %(levelname)5s %(message)s
+format=%(asctime)s %(levelname)s %(message)s
 datefmt=
 class=logging.Formatter"""
 

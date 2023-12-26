@@ -22,9 +22,6 @@ borg_prune_arguments:
   - "--keep-last 10"
   - "--dry-run"
 
-borg_init_arguments:
-  - "--encryption=repokey"
-
 cron_commands:
 - "create"
 - "prune"

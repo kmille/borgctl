@@ -6,13 +6,14 @@ from ruamel.yaml import YAML, YAMLError
 import logging
 
 BORG_COMMANDS = [
-    # TODO: sort alphabetly
-    "list", "create", "check", "compact", "prune", "mount", "umount", "init", "break-lock", "info", "diff", "delete", "upgrade", "import-tar", "export-tar", "config",
-    # TODO: commands => links
-    # import-tar => tar
-    #https://borgbackup.readthedocs.io/en/stable/usage/tar.html#borg-export-tar
-    #https://borgbackup.readthedocs.io/en/stable/usage/lock.html#borg-break-lock
+    'break-lock', 'check', 'compact', 'config', 'create',
+    'delete', 'diff', 'export-tar', 'import-tar', 'info',
+    'init', 'list', 'mount', 'prune', 'umount', 'upgrade'
 ]
+# TODO: commands => links
+# import-tar => tar
+# https://borgbackup.readthedocs.io/en/stable/usage/tar.html#borg-export-tar
+# https://borgbackup.readthedocs.io/en/stable/usage/lock.html#borg-break-lock
 
 
 def fail(msg: str, code: int = 1):
@@ -60,7 +61,8 @@ def write_state_file(config: dict, config_file: str, command: str):
 
 
 def check_config(config: dict):
-    config_keys = ['repository', 'ssh_key', 'prefix', 'passphrase', 'mount_point', 'borg_create_backup_dirs', 'borg_create_excludes', 'borg_create_arguments', 'borg_prune_arguments', 'envs', 'borg_binary', 'cron_commands', 'state_commands']
+    config_keys = ['repository', 'ssh_key', 'prefix', 'passphrase', 'mount_point', 'borg_create_backup_dirs', 'borg_create_excludes',
+                   'borg_create_arguments', 'borg_prune_arguments', 'envs', 'borg_binary', 'cron_commands', 'state_commands']
     for config_key in config_keys:
         if config_key not in config:
             fail(f"'{config_key}' not specified in config file")

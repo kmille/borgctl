@@ -101,7 +101,7 @@ def generate_authorized_keys(config: dict) -> NoReturn:
 
         remote_authorized_keys = user_home_dir + "/.ssh/authorized_keys"
         remote_command = f"""echo -e '{restricted}\\n' | ssh {host} 'cat >> {remote_authorized_keys}'"""
-        logging.info(f"Or this one-in-all command:\n{remote_command}")
+        logging.info(f"Or this all-in-one command:\n{remote_command}")
     sys.exit(0)
 
 

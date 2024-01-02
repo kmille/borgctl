@@ -2,7 +2,26 @@
 
 [borgbackup](https://www.borgbackup.org/) is cool and easy to use. But we all end up writing bash scripts for creating/listing/pruning/checking/... backups. borgctl is a borg wrapper that uses yaml configuration files to make life a bit easier.
 
+## Motivation (my use cases)
+
+I don't want to write a bash script on every server to make backups. I don't want to have an extra script for listing/pruning backups. I want to backup to multiple storage backends. I backup different things to different remote backends (money constraint). I don't want to store my borg passphrase on disk. I also don't want to enter it for every backend. I want to make backups in append-only-mode. To prune/compact backups, Yubikey authentication is mandatory. I want to see when my last backup was done (monitoring). I want usability and easy deployment.
+
+Now, I make backups with
+
+```bash
+borgctl -c backend1-append.yml -c backend1-append.yml -c backend2-append.yml create
+```
+
+I prune/compact backups with (needs Yubikey)
+
+```bash
+borgctl -c backend1-full.yml -c backend1-full.yml -c backend2-full.yml --cron
+```
+
+My [i3](https://i3wm.org/) status bar shows a red `B:7d` if my last backup is 7 days old.
+
 ## Features
+
 - Support for yaml configuration files. Specify what to backup and where to backup
 - Just call `borgctl create`, `borgctl list`, `borgctl prune`, ...
 - Run borgctl with multiple configuration files to be flexible (e. g. if you want to backup to multiple remote backends or to run `borg create` in append-only-mode and `borg prune/compact` with a Yubikey)
@@ -316,9 +335,20 @@ root@linbox:~ cat /var/log/borgctl/borg_state_default_create.txt
 2023-12-26_11:22:08
 ```
 
-### borg passphrase: ask vs ask-always
-If you don't want to keep your borg passphrase on your disk, you can use `ask` or `ask-always`. If you specify `ask` in your config file as passphrase, you will be ask during runtime for the passphrase. The difference between `ask` and `ask-always`: That's interesting if you run borgctl with multiple config files and different configurations. You get always asked for the password if you specify `ask-always`. If you run borgctl with three config files and every config file has `ask` specified, it only asks you for the first run. Then, it uses the previously entered password.
+### borg passphrase: ask and ask-always
+If you don't want to keep your borg passphrase on your disk, you can use `ask` or `ask-always`. If you specify `ask` in your config file as passphrase, you will be ask during runtime for the passphrase. The difference between `ask` and `ask-always`: That's interesting if you run borgctl with multiple config files and different configurations. You always get asked for the password if you specify `ask-always`. If you run borgctl with three config files and every config file has `ask` specified, it only asks you for the first run. Then, it uses the previously entered password.
 
 ### Misc
 
 In config file, you can specify the borg binary (borg_binary) used for invocation. You can also add environment variables. If you need help for a borg command, you can just add `help` (like `borgctl list help`). You can change default arguments for specific borg commands by adding/modifying `borg_$command_arguments` in the config file (like `borg_create_arguments`).
+
+### Using the Yubikey for authentication
+If you want to authenticate with a Yubikey without touching `~/.ssh/config`, you can keep `ssh_key` empty and add
+```yaml
+"BORG_RSH": "ssh -I /usr/lib64/pkcs11/opensc-pkcs11.so -o ForwardAgent=no -o IdentityAgent=no"
+```
+as environment variable in the config file.
+
+### Monitoring with py3status
+
+I use [monitoring_last_backup.py](https://github.com/kmille/borgctl/blob/main/contrib/monitoring_last_backup.py) with [py3status](https://github.com/ultrabug/py3status) on my laptop. It shows `B:3d` when my last backup was 3 days ago. The color changes from green to red after 7 days. You can run python3 monitoring_last_backup.py to test it.

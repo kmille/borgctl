@@ -116,7 +116,7 @@ def run_cron_commands(config: dict, env: dict, config_file: str):
             return_code = ret
     if return_code != 0:
         logging.info(f"Returning with exit code {return_code}")
-    sys.exit(return_code)
+    return return_code
 
 
 def main():
@@ -180,15 +180,15 @@ The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME or ~/.local/s
             elif args.generate_authorized_keys:
                 generate_authorized_keys(config)
             elif args.cron:
-                run_cron_commands(config, env, config_file)
+                ret = run_cron_commands(config, env, config_file)
+                return_code = ret if ret > return_code else return_code
             elif "help" in borg_cli_arguments:
                 run_borg_command(args.command, env, config, config_file, ["--help", ])
                 print(f"Check out the docs: https://borgbackup.readthedocs.io/en/stable/usage/{args.command}.html")
                 sys.exit(0)
             elif args.command:
                 ret = run_borg_command(args.command, env, config, config_file, borg_cli_arguments)
-                if ret > return_code:
-                    return_code = ret
+                return_code = ret if ret > return_code else return_code
             else:
                 parser.print_help()
         sys.exit(return_code)

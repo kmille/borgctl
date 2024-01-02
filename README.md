@@ -23,17 +23,16 @@ There is also [borgmagic](https://torsion.org/borgmatic/), but it can not handle
 
 ```bash
 kmille@linbox:~ sudo borgctl --version
-Running borgctl 0.4.2
+Running borgctl 0.4.3
 
-kmille@linbox:~ sudo borgctl --help   
-usage: borgctl [-h] [-d] [-s] [-a] [-c CONFIG] [--cron] [--version]
-               {break-lock,check,compact,config,create,delete,diff,export-tar,import-tar,info,init,list,mount,prune,umount,upgrade} ...
+kmille@linbox:~ sudo borgctl --help
+usage: borgctl [-h] [-d] [-s] [-a] [-c CONFIG] [--cron] [-l] [--version] {break-lock,check,compact,config,create,delete,diff,export-tar,import-tar,info,init,list,mount,prune,umount,upgrade} ...
 
-borgctl is a simple wrapper around borgbackup. The working directory is /etc/borgctl for root or XDG_CONFIG_HOME/borgctl or ~/.config/borgctl for non-root users. The
-log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME or ~/.local/state/borgctl for non-root users.
+borgctl is a simple borgbackup wrapper. The working directory is /etc/borgctl for root or XDG_CONFIG_HOME/borgctl or ~/.config/borgctl for non-root users. The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME/borgctl or
+~/.local/state/borgctl for non-root users.
 
 positional arguments:
-  {list,create,check,compact,prune,mount,umount,init,break-lock,info,diff,delete,upgrade,import-tar,export-tar,config}
+  {break-lock,check,compact,config,create,delete,diff,export-tar,import-tar,info,init,list,mount,prune,umount,upgrade}
 
 options:
   -h, --help            show this help message and exit
@@ -44,11 +43,11 @@ options:
   -a, --generate-authorized_keys
                         prints the authorized_keys entry to stdout. You have to add it to the remote host (if you backup over ssh)
   -c CONFIG, --config CONFIG
-                        specify the config file to you use. Defaults to default.yml. You can specify multiple config files with -c default.yml -c lokal-disk.yml. If
-                        the config file contains a / then a relative/absolute path is asumed. If not, $working_dir/$config will be used
+                        specify the config file to you use. Defaults to default.yml. You can specify multiple config files with -c default.yml -c lokal-disk.yml. If the config file contains a / then a relative/absolute path is asumed. If
+                        not, $working_dir/$config will be used
   --cron                run multiple borg commands in a row. The commands to run are specified in the config file (cron_commands)
+  -l, --list            list borgctl config files in $config_dir
   --version             show version and exit
-kmille@linbox:~ 
 ```
 
 ## Installation

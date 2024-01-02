@@ -19,6 +19,14 @@ def show_version() -> NoReturn:
     sys.exit(0)
 
 
+def show_config_files() -> NoReturn:
+    config_dir = get_conf_directory()
+    for file in config_dir.glob("*"):
+        if file.name != "logging.conf":
+            print(file.name)
+    sys.exit(0)
+
+
 def update_config(ssh_key_location: str, config_file: Path) -> None:
     try:
         yaml = YAML()

@@ -9,7 +9,8 @@ import logging.config
 from borgctl.utils import write_state_file, get_conf_directory, \
     load_config, BORG_COMMANDS, fail, write_logging_config, get_new_archive_name
 
-from borgctl.tools import show_version, handle_ssh_key, generate_authorized_keys, generate_default_config
+from borgctl.tools import show_version, show_config_files, \
+    handle_ssh_key, generate_authorized_keys, generate_default_config
 
 
 def init_logging():
@@ -137,6 +138,9 @@ The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME or ~/.local/s
     parser.add_argument("--cron",
                         action="store_true",
                         help="run multiple borg commands in a row. The commands to run are specified in the config file (cron_commands)")
+    parser.add_argument("-l", "--list",
+                        action="store_true",
+                        help="list borgctl config files in $config_dir")
     parser.add_argument("--version",
                         action="store_true",
                         help="show version and exit")
@@ -154,6 +158,8 @@ The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME or ~/.local/s
     init_logging()
     if args.generate_default_config:
         generate_default_config()
+    elif args.list:
+        show_config_files()
     elif args.version:
         show_version()
 

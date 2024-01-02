@@ -285,6 +285,8 @@ cron_commands:
 - "compact"
 ```
 
+You can change the arguments by adding/modifing `borg_$command_arguments` in the config file.
+
 bortctl also writes state files, if a borg command runs successfully. It contains the current date. You can use it for monitoring. State files are written to the log directory. The format is`borg_state__$config_file_prefix_$borg_command.txt`. In the config file you can specify a list of commands for which a state file should be created.
 
 ```yaml

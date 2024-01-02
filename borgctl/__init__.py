@@ -168,7 +168,7 @@ The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME/borgctl or ~/
     return_code = 0
     try:
         for config_file in args.config:
-            if "/" in args.config:
+            if "/" in config_file:
                 config_file = Path(config_file).expanduser()
             else:
                 config_file = (get_conf_directory() / config_file).expanduser()

@@ -2,13 +2,13 @@ import sys
 from pathlib import Path
 import subprocess
 import logging
-from ruamel.yaml import YAML, YAMLError  # type: ignore
+from ruamel.yaml import YAML
 import socket
 import os
 
 
 from typing import NoReturn, Tuple, Any
-from borgctl.utils import fail, get_conf_directory
+from borgctl.utils import fail, get_conf_directory, update_config_sshkey
 from borgctl.wordlist import get_passphrase
 
 
@@ -24,20 +24,6 @@ def show_config_files() -> NoReturn:
     for file in config_dir.glob("*.yml"):
         print(file.name)
     sys.exit(0)
-
-
-def update_config(ssh_key_location: str, config_file: Path) -> None:
-    try:
-        yaml = YAML()
-        yaml.default_flow_style = False
-        yaml.preserve_quotes = True
-        config = yaml.load(config_file)
-        if config["ssh_key"] != ssh_key_location:
-            config["ssh_key"] = ssh_key_location
-            yaml.dump(config, config_file)
-            logging.info(f"Updated ssh_key in {config_file}")
-    except YAMLError as e:
-        fail(f"Could not parse yaml in {config_file}: {e}")
 
 
 def generate_ssh_key(out_file: Path) -> None:
@@ -64,7 +50,7 @@ def handle_ssh_key(config: dict[str, Any], config_file: Path) -> NoReturn:
         generate_ssh_key(ssh_key_location)
     else:
         logging.warning(f"ssh key {ssh_key_location} already exists. Not overwriting")
-    update_config(ssh_key_location.as_posix(), config_file)
+    update_config_sshkey(ssh_key_location.as_posix(), config_file)
     sys.exit(0)
 
 

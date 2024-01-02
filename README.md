@@ -18,19 +18,19 @@ I prune/compact backups with (needs Yubikey)
 borgctl -c backend1-full.yml -c backend2-full.yml -c backend3-full.yml --cron
 ```
 
-My [i3](https://i3wm.org/) status bar shows a red `B:7d` if my last backup is 7 days old. On servers, I like to `create`, `prune` and `compact` backups by just using `borgctl --cron`. There is also [borgmagic](https://torsion.org/borgmatic/), but it can not handle all my use cases (to admit: I first reinvented the wheel and then stumbled across borgmatic. I also thought it just takes a day to write a small python script ...)
+My [i3](https://i3wm.org/) status bar shows a red `B:7d` if my last backup is 7 days old. On servers, I like to `create`, `prune` and `compact` backups by just using `borgctl --cron`. There is also [borgmagic](https://torsion.org/borgmatic/), but it does not handle all my use cases (to admit: I first reinvented the wheel and then stumbled across borgmatic. I also thought it just takes a day to write a small python script ...)
 
 ## Features
 
-- Support for yaml configuration files. Specify what to backup and where to backup
+- Yaml configuration files: Specify what to backup and where to backup
 - Usability: Just call `borgctl create`, `borgctl list`, `borgctl prune`, ...
 - Flexibility: Run borgctl with multiple configuration files to handle different use cases (e. g. backup to multiple remote backends or run `borg create` in append-only-mode and `borg prune/compact` with a Yubikey)
-- Ask the user for the borg passphrase (if you don't want to store it on disk). Re-use the entered password for other remote storage backends (you don't have to re-enter it again, just specify `ask` as passphrase in the config file)
+- Ask the user for the borg passphrase (if you don't want to store it on disk, just specify ask as passphrase in the config file). Re-use the entered password for other remote storage backends (you don't have to re-enter it again)
 - For semi-automated setups: There are some helpers to generate ssh keys and print the authorized_keys entry (with restricted access)
 - Run multiple borg commands by running  `borgctl --cron` (like `create` + `prune` + `compact`, commands can be specified in the config file)
-- Monitoring: Write a state file (text file with current timestamp in) after successfully executing borg commands
-- Logging: Write everything in a log file
-- Easy to install, deploy and use
+- Monitoring: Write a state file (text file with timestamp in) after successfully executing borg commands
+- Logging: Write everything to a log file that automatically rotates
+- Easy to deploy and use
 
 ## Quickstart
 

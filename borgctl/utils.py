@@ -10,14 +10,14 @@ from typing import Tuple, NoReturn, Any
 
 BORG_COMMANDS = [
     'break-lock', 'check', 'compact', 'config', 'create',
-    'delete', 'diff', 'export-tar', 'import-tar', 'info',
-    'init', 'list', 'mount', 'prune', 'umount', 'upgrade'
+    'delete', 'diff', 'extract', 'export-tar', 'import-tar', 'info',
+    'init', 'key', 'list', 'mount', 'prune', 'rename', 'umount', 'upgrade'
 ]
 
 remembered_password = ""
 
 
-def fail(msg: str, code: int = 1) -> NoReturn:
+def fail(msg: str | Exception, code: int = 1) -> NoReturn:
     logging.error(msg)
     sys.exit(code)
 
@@ -50,11 +50,11 @@ def get_conf_directory() -> Path:
     return conf_dir
 
 
-def write_state_file(config: dict[str, Any], config_file: str, command: str) -> None:
+def write_state_file(config: dict[str, Any], config_file: Path, command: str) -> None:
     if command not in config["state_commands"]:
         return
     log_dir = get_log_directory()
-    config_prefix = Path(config_file).stem
+    config_prefix = config_file.stem
     state_file = log_dir / f"borg_state_{config_prefix}_{command}.txt"
     now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     state_file.write_text(now)
@@ -95,7 +95,7 @@ def check_config(config: dict[str, Any]) -> None:
         fail("'envs' in config file is not a dictionary")
 
 
-def load_config(config_file: Path) -> Tuple[dict[str, Any], dict[str, Any]]:
+def load_config(config_file: Path) -> Tuple[dict[str, str], dict[str, Any]]:
     logging.info(f"\aUsing config file {config_file}")
     if not config_file.exists():
         fail(f"Could not load config file {config_file}\nPlease use --generate-default-config to create a default config")
@@ -185,7 +185,7 @@ def print_docs_url(command: str) -> None:
     print(f"Check out the docs: {url}")
 
 
-def handle_manual_passphrase(config: dict[str, Any], env: dict[str, Any]) -> dict[str, Any]:
+def handle_manual_passphrase(config: dict[str, Any], env: dict[str, str]) -> dict[str, str]:
     """check if we need to ask the user for the passphrase"""
 
     if config["passphrase"] not in ("ask", "ask-always"):
@@ -202,3 +202,43 @@ def handle_manual_passphrase(config: dict[str, Any], env: dict[str, Any]) -> dic
 
     env.update({"BORG_PASSPHRASE": passphrase})
     return env
+
+
+def update_config_sshkey(ssh_key_location: str, config_file: Path) -> None:
+    try:
+        yaml = YAML()
+        yaml.default_flow_style = False
+        yaml.preserve_quotes = True
+        config = yaml.load(config_file)
+        if config["ssh_key"] != ssh_key_location:
+            config["ssh_key"] = ssh_key_location
+            yaml.dump(config, config_file)
+            logging.info(f"Updated ssh_key in {config_file}")
+    except YAMLError as e:
+        fail(f"Could not parse yaml in {config_file}: {e}")
+
+
+def update_config_passphrase(passphrase: str, config_file: Path) -> None:
+    try:
+        yaml = YAML()
+        yaml.default_flow_style = False
+        yaml.preserve_quotes = True
+        config = yaml.load(config_file)
+        if config["passphrase"] in ("ask", "ask-always"):
+            logging.warning("Not updating config file: (ask/ask-always) is used")
+        config["passphrase"] = passphrase
+        yaml.dump(config, config_file)
+        logging.info(f"Updated passphrase in {config_file}")
+    except YAMLError as e:
+        fail(f"Could not parse yaml in {config_file}: {e}")
+
+
+def handle_change_passphrase(config: dict[str, Any], env: dict[str, str], config_file: Path) -> dict[str, str] | NoReturn:
+    passphrase1 = getpass(f"Please enter the new borg passphrase for repository {config['repository']}: ")
+    passphrase2 = getpass(f"Please re-enter the new borg passphrase for repository {config['repository']}: ")
+    if passphrase1 != passphrase2:
+        fail("Passwords missmatch")
+    else:
+        env.update({"BORG_NEW_PASSPHRASE": passphrase1})
+        update_config_passphrase(passphrase1, config_file)
+        return env

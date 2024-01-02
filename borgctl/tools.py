@@ -21,9 +21,8 @@ def show_version() -> NoReturn:
 
 def show_config_files() -> NoReturn:
     config_dir = get_conf_directory()
-    for file in config_dir.glob("*"):
-        if file.name != "logging.conf":
-            print(file.name)
+    for file in config_dir.glob("*.yml"):
+        print(file.name)
     sys.exit(0)
 
 

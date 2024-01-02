@@ -2,9 +2,11 @@ import os
 from pathlib import Path
 import datetime
 import sys
-from ruamel.yaml import YAML, YAMLError
+from ruamel.yaml import YAML, YAMLError # type: ignore
 import logging
 from getpass import getpass
+from typing import Tuple, NoReturn, Any
+
 
 BORG_COMMANDS = [
     'break-lock', 'check', 'compact', 'config', 'create',
@@ -14,7 +16,8 @@ BORG_COMMANDS = [
 
 remembered_password = ""
 
-def fail(msg: str, code: int = 1):
+
+def fail(msg: str, code: int = 1) -> NoReturn:
     logging.error(msg)
     sys.exit(code)
 
@@ -47,7 +50,7 @@ def get_conf_directory() -> Path:
     return conf_dir
 
 
-def write_state_file(config: dict, config_file: str, command: str):
+def write_state_file(config: dict[str, Any], config_file: str, command: str) -> None:
     if command not in config["state_commands"]:
         return
     log_dir = get_log_directory()
@@ -58,7 +61,7 @@ def write_state_file(config: dict, config_file: str, command: str):
     logging.info(f"Updated state file {state_file}")
 
 
-def check_config(config: dict):
+def check_config(config: dict[str, Any]) -> None:
     config_keys = ['repository', 'ssh_key', 'prefix', 'passphrase', 'mount_point', 'borg_create_backup_dirs', 'borg_create_excludes',
                    'borg_create_arguments', 'borg_prune_arguments', 'envs', 'borg_binary', 'cron_commands', 'state_commands']
     for config_key in config_keys:
@@ -92,7 +95,7 @@ def check_config(config: dict):
         fail("'envs' in config file is not a dictionary")
 
 
-def load_config(config_file: Path):
+def load_config(config_file: Path) -> Tuple[dict[str, Any], dict[str, Any]]:
     logging.info(f"Using config file {config_file}")
     if not config_file.exists():
         fail(f"Could not load config file {config_file}\nPlease use --generate-default-config to create a default config")
@@ -125,7 +128,7 @@ def load_config(config_file: Path):
     return env, config
 
 
-def write_logging_config():
+def write_logging_config() -> None:
 
     log_file = get_log_directory() / "borg.log"
     logging_config = f"""[loggers]
@@ -164,13 +167,13 @@ class=logging.Formatter"""
         logging_file_location.write_text(logging_config)
 
 
-def get_new_archive_name(config: dict) -> str:
+def get_new_archive_name(config: dict[str, str]) -> str:
     now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     archive = "::" + config["prefix"] + "_" + now
     return archive
 
 
-def print_docs_url(command: str):
+def print_docs_url(command: str) -> None:
     if command == "import-tar":
         url = "https://borgbackup.readthedocs.io/en/stable/usage/tar.html#borg-import-tar"
     elif command == "export-tar":
@@ -182,7 +185,7 @@ def print_docs_url(command: str):
     print(f"Check out the docs: {url}")
 
 
-def handle_manual_passphrase(config: dict, env: dict[str, str]) -> dict[str, str]:
+def handle_manual_passphrase(config: dict[str, Any], env: dict[str, Any]) -> dict[str, Any]:
     """check if we need to ask the user for the passphrase"""
 
     if config["passphrase"] not in ("ask", "ask-always"):

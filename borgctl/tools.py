@@ -2,12 +2,12 @@ import sys
 from pathlib import Path
 import subprocess
 import logging
-from ruamel.yaml import YAML, YAMLError
+from ruamel.yaml import YAML, YAMLError # type: ignore
 import socket
 import os
 
 
-from typing import NoReturn
+from typing import NoReturn, Tuple, Any
 from borgctl.utils import fail, get_conf_directory
 from borgctl.wordlist import get_passphrase
 
@@ -54,7 +54,7 @@ def generate_ssh_key(out_file: Path) -> None:
     logging.info(f"Successfully created ssh key {out_file}")
 
 
-def handle_ssh_key(config: dict, config_file: Path) -> NoReturn:
+def handle_ssh_key(config: dict[str, Any], config_file: Path) -> NoReturn:
     if config["ssh_key"] == "":
         ssh_key_location = Path(f"~/.ssh/borg_{config_file.stem}").expanduser()
     else:
@@ -68,7 +68,7 @@ def handle_ssh_key(config: dict, config_file: Path) -> NoReturn:
     sys.exit(0)
 
 
-def parse_borg_repository(repository: str):
+def parse_borg_repository(repository: str) -> Tuple[str, str | None, str | None]:
     host = repo_dir = None
     user = os.getlogin()
     if repository.strip().startswith("ssh://"):
@@ -82,7 +82,7 @@ def parse_borg_repository(repository: str):
     return user, host, repo_dir
 
 
-def generate_authorized_keys(config: dict) -> NoReturn:
+def generate_authorized_keys(config: dict[str, Any]) -> NoReturn:
     ssh_key = config["ssh_key"]
     if ssh_key == "":
         fail("No ssh key was specified in the config file. Use --generate-ssh-key to generate one")
@@ -112,7 +112,7 @@ def generate_authorized_keys(config: dict) -> NoReturn:
     sys.exit(0)
 
 
-def generate_default_config():
+def generate_default_config() -> None:
     config_template = Path(__file__).parent / "default.yml.template"
     yaml = YAML()
     yaml.default_flow_style = False

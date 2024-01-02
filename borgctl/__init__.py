@@ -4,6 +4,7 @@ import subprocess
 import sys
 import logging
 import logging.config
+from typing import Any
 
 from borgctl.utils import write_state_file, get_conf_directory, \
     load_config, BORG_COMMANDS, fail, write_logging_config, get_new_archive_name, \
@@ -13,14 +14,14 @@ from borgctl.tools import show_version, show_config_files, \
     handle_ssh_key, generate_authorized_keys, generate_default_config
 
 
-def init_logging():
+def init_logging() -> None:
     config_file = get_conf_directory() / "logging.conf"
     if not config_file.exists():
         write_logging_config()
     logging.config.fileConfig(config_file)
 
 
-def execute_borg(cmd: list[str], env: dict) -> int:
+def execute_borg(cmd: list[str], env: dict[str, str]) -> int:
     debug_out = " ".join([f"{key}=\"{value}\"" for key, value in env.items() if key != "BORG_PASSPHRASE"])
     debug_out += " " + " ".join(cmd)
     logging.info(f"Executing: {debug_out}")
@@ -33,7 +34,7 @@ def execute_borg(cmd: list[str], env: dict) -> int:
         return p.returncode
 
 
-def run_borg_command(command: str, env: dict[str, str], config: dict, config_file: str, args: list[str]):
+def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], config_file: str, args: list[str]) -> int:
 
     cmd = [config["borg_binary"], "--verbose", command]
     if command == "create":
@@ -87,7 +88,7 @@ def run_borg_command(command: str, env: dict[str, str], config: dict, config_fil
     return return_code
 
 
-def prepare_borg_create(config: dict, cli_arguments: list[str]) -> list[str]:
+def prepare_borg_create(config: dict[str, Any], cli_arguments: list[str]) -> list[str]:
     arguments = []
 
     for exclude in config["borg_create_excludes"]:
@@ -106,7 +107,7 @@ def prepare_borg_create(config: dict, cli_arguments: list[str]) -> list[str]:
     return arguments
 
 
-def run_cron_commands(config: dict, env: dict, config_file: str):
+def run_cron_commands(config: dict[str, Any], env: dict[str, str], config_file: str) -> int:
     return_code = 0
     for command in config["cron_commands"]:
         logging.info(f"Running 'borg {command}' in --cron mode")
@@ -118,7 +119,7 @@ def run_cron_commands(config: dict, env: dict, config_file: str):
     return return_code
 
 
-def main():
+def main() -> None:
     description = """borgctl is a simple borgbackup wrapper. The working directory is /etc/borgctl for root or XDG_CONFIG_HOME/borgctl or ~/.config/borgctl for non-root users.
 The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME/borgctl or ~/.local/state/borgctl for non-root users."""
     parser = argparse.ArgumentParser(description=description)

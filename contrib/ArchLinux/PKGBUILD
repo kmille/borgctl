@@ -10,7 +10,7 @@ license=('GPL3')
 makedepends=(python-poetry-core python-build python-installer python-wheel)
 depends=(python python-ruamel-yaml)
 source=(https://github.com/kmille/borgctl/archive/refs/tags/$pkgver.tar.gz)
-sha256sums=('SKIP')
+sha256sums=('d5ab2a38a6a46713b2a01bab06501e113aad8da2a55b69215a1b5c9556b71e9f')
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"

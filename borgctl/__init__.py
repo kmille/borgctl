@@ -2,13 +2,12 @@ from pathlib import Path
 import argparse
 import subprocess
 import sys
-from getpass import getpass
 import logging
 import logging.config
 
 from borgctl.utils import write_state_file, get_conf_directory, \
     load_config, BORG_COMMANDS, fail, write_logging_config, get_new_archive_name, \
-    print_docs_url
+    print_docs_url, handle_manual_passphrase
 
 from borgctl.tools import show_version, show_config_files, \
     handle_ssh_key, generate_authorized_keys, generate_default_config
@@ -35,6 +34,7 @@ def execute_borg(cmd: list[str], env: dict) -> int:
 
 
 def run_borg_command(command: str, env: dict[str, str], config: dict, config_file: str, args: list[str]):
+
     cmd = [config["borg_binary"], "--verbose", command]
     if command == "create":
         args = prepare_borg_create(config, args)
@@ -50,9 +50,7 @@ def run_borg_command(command: str, env: dict[str, str], config: dict, config_fil
             for word in argument.split():
                 cmd.append(word)
 
-    if config["passphrase"] == "ask":
-        passphrase = getpass(f"\aPlease enter the borg passphrase for {config['repository']}: ")
-        env.update({"BORG_PASSPHRASE": passphrase})
+    env = handle_manual_passphrase(config, env)
 
     for arg in args:
         if arg.startswith("-"):
@@ -173,7 +171,6 @@ The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME/borgctl or ~/
                 config_file = Path(config_file).expanduser()
             else:
                 config_file = (get_conf_directory() / config_file).expanduser()
-
             env, config = load_config(config_file)
 
             if args.generate_ssh_key:
@@ -196,6 +193,7 @@ The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME/borgctl or ~/
     except KeyboardInterrupt:
         pass
     except Exception as e:
+        raise
         fail(e)
 
 

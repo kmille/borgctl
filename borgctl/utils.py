@@ -4,6 +4,7 @@ import datetime
 import sys
 from ruamel.yaml import YAML, YAMLError
 import logging
+from getpass import getpass
 
 BORG_COMMANDS = [
     'break-lock', 'check', 'compact', 'config', 'create',
@@ -11,6 +12,7 @@ BORG_COMMANDS = [
     'init', 'list', 'mount', 'prune', 'umount', 'upgrade'
 ]
 
+remembered_password = ""
 
 def fail(msg: str, code: int = 1):
     logging.error(msg)
@@ -178,3 +180,22 @@ def print_docs_url(command: str):
     else:
         url = f"https://borgbackup.readthedocs.io/en/stable/usage/{command}.html"
     print(f"Check out the docs: {url}")
+
+
+def handle_manual_passphrase(config: dict, env: dict[str, str]) -> dict[str, str]:
+    """check if we need to ask the user for the passphrase"""
+
+    if config["passphrase"] not in ("ask", "ask-always"):
+        return env
+
+    global remembered_password
+
+    if config["passphrase"] == "ask" and remembered_password != "":
+        passphrase = remembered_password
+        logging.info("Using previously entered password")
+    else:
+        passphrase = getpass(f"\aPlease enter the borg passphrase for {config['repository']}: ")
+        remembered_password = passphrase
+
+    env.update({"BORG_PASSPHRASE": passphrase})
+    return env

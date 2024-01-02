@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import datetime
 import sys
-from ruamel.yaml import YAML, YAMLError # type: ignore
+from ruamel.yaml import YAML, YAMLError  # type: ignore
 import logging
 from getpass import getpass
 from typing import Tuple, NoReturn, Any

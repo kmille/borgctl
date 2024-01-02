@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 import subprocess
 import logging
-from ruamel.yaml import YAML, YAMLError # type: ignore
+from ruamel.yaml import YAML, YAMLError  # type: ignore
 import socket
 import os
 

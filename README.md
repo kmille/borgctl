@@ -9,13 +9,13 @@ I don't want to write a bash script on every server to make backups. I don't wan
 Now, I make backups with
 
 ```bash
-borgctl -c backend1-append.yml -c backend1-append.yml -c backend2-append.yml create
+borgctl -c backend1-append.yml -c backend2-append.yml -c backend3-append.yml create
 ```
 
 I prune/compact backups with (needs Yubikey)
 
 ```bash
-borgctl -c backend1-full.yml -c backend1-full.yml -c backend2-full.yml --cron
+borgctl -c backend1-full.yml -c backend2-full.yml -c backend3-full.yml --cron
 ```
 
 My [i3](https://i3wm.org/) status bar shows a red `B:7d` if my last backup is 7 days old.

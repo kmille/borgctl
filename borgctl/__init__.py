@@ -120,8 +120,8 @@ def run_cron_commands(config: dict, env: dict, config_file: str):
 
 
 def main():
-    description = """borgctl is a simple wrapper around borgbackup. The working directory is /etc/borgctl for root or XDG_CONFIG_HOME/borgctl or ~/.config/borgctl for non-root users.
-The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME or ~/.local/state/borgctl for non-root users."""
+    description = """borgctl is a simple borgbackup wrapper. The working directory is /etc/borgctl for root or XDG_CONFIG_HOME/borgctl or ~/.config/borgctl for non-root users.
+The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME/borgctl or ~/.local/state/borgctl for non-root users."""
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("-d", "--generate-default-config",
                         action="store_true",

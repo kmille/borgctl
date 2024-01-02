@@ -96,7 +96,7 @@ def check_config(config: dict[str, Any]) -> None:
 
 
 def load_config(config_file: Path) -> Tuple[dict[str, Any], dict[str, Any]]:
-    logging.info(f"Using config file {config_file}")
+    logging.info(f"\aUsing config file {config_file}")
     if not config_file.exists():
         fail(f"Could not load config file {config_file}\nPlease use --generate-default-config to create a default config")
 
@@ -197,7 +197,7 @@ def handle_manual_passphrase(config: dict[str, Any], env: dict[str, Any]) -> dic
         passphrase = remembered_password
         logging.info("Using previously entered password")
     else:
-        passphrase = getpass(f"\aPlease enter the borg passphrase for {config['repository']}: ")
+        passphrase = getpass(f"Please enter the borg passphrase for {config['repository']}: ")
         remembered_password = passphrase
 
     env.update({"BORG_PASSPHRASE": passphrase})

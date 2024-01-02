@@ -194,7 +194,6 @@ The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME/borgctl or ~/
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        raise
         fail(e)
 
 

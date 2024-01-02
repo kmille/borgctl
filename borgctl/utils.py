@@ -10,10 +10,6 @@ BORG_COMMANDS = [
     'delete', 'diff', 'export-tar', 'import-tar', 'info',
     'init', 'list', 'mount', 'prune', 'umount', 'upgrade'
 ]
-# TODO: commands => links
-# import-tar => tar
-# https://borgbackup.readthedocs.io/en/stable/usage/tar.html#borg-export-tar
-# https://borgbackup.readthedocs.io/en/stable/usage/lock.html#borg-break-lock
 
 
 def fail(msg: str, code: int = 1):
@@ -170,3 +166,15 @@ def get_new_archive_name(config: dict) -> str:
     now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     archive = "::" + config["prefix"] + "_" + now
     return archive
+
+
+def print_docs_url(command: str):
+    if command == "import-tar":
+        url = "https://borgbackup.readthedocs.io/en/stable/usage/tar.html#borg-import-tar"
+    elif command == "export-tar":
+        url = "https://borgbackup.readthedocs.io/en/stable/usage/tar.html#borg-export-tar"
+    elif command == "break-lock":
+        url = "https://borgbackup.readthedocs.io/en/stable/usage/lock.html#borg-break-lock"
+    else:
+        url = f"https://borgbackup.readthedocs.io/en/stable/usage/{command}.html"
+    print(f"Check out the docs: {url}")

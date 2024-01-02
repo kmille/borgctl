@@ -7,7 +7,8 @@ import logging
 import logging.config
 
 from borgctl.utils import write_state_file, get_conf_directory, \
-    load_config, BORG_COMMANDS, fail, write_logging_config, get_new_archive_name
+    load_config, BORG_COMMANDS, fail, write_logging_config, get_new_archive_name, \
+    print_docs_url
 
 from borgctl.tools import show_version, show_config_files, \
     handle_ssh_key, generate_authorized_keys, generate_default_config
@@ -76,7 +77,7 @@ def run_borg_command(command: str, env: dict[str, str], config: dict, config_fil
             cmd.append(mount_point)
     elif command == "init":
         cmd.append(config["repository"])
-    elif command == "export-tar":
+    elif command == "export-tar" and "--help" not in args:
         if len(args) < 2:
             fail("The export-tar command needs two arguments (plus optional parameters like --tar-filter): ::archive <outputfile>")
         if len(args) == 1:
@@ -184,7 +185,7 @@ The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME/borgctl or ~/
                 return_code = ret if ret > return_code else return_code
             elif "help" in borg_cli_arguments:
                 run_borg_command(args.command, env, config, config_file, ["--help", ])
-                print(f"Check out the docs: https://borgbackup.readthedocs.io/en/stable/usage/{args.command}.html")
+                print_docs_url(args.command)
                 sys.exit(0)
             elif args.command:
                 ret = run_borg_command(args.command, env, config, config_file, borg_cli_arguments)

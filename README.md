@@ -129,7 +129,7 @@ root@linbox:~ borgctl --generate-default-config
 2023-12-26 10:59:28,112  INFO Successfully wrote config file to /etc/borgctl/default.yml
 ```
 
-`/etc/borgctl/default.yml`is just a copy of the [default config file](https://github.com/kmille/borgctl/blob/main/borgctl/default.yml.template). A new diceware password for the borg passphrase is generated. The hostname is used as borg prefix. borgctl can generate a ssh key for you:
+`/etc/borgctl/default.yml` is just a copy of the [default config file](https://github.com/kmille/borgctl/blob/main/borgctl/default.yml.template). A new diceware password for the borg passphrase is generated. It's crucial to make a backup of the passphrase! The hostname is used as borg prefix. borgctl can generate a ssh key for you:
 
 ```bash
 root@linbox:~ borgctl --generate-ssh-key

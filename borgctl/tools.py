@@ -86,7 +86,8 @@ def generate_authorized_keys(config: dict[str, Any]) -> NoReturn:
     if repo_dir:
         restricted = f"""command="borg serve --restrict-to-path {repo_dir}",restrict {pub_key}"""
         logging.info(f"Use this line for restricted access:\n{restricted}\n")
-
+        logging.warning("Please note that you have to initalize a repository with 'borg init --append-only'. "
+                        "Using 'borg serve --append-only' is not enough. Use 'borg config' to check.")
         try:
             user_home_dir = Path(f"~{user}").expanduser().as_posix()
         except RuntimeError:
@@ -94,7 +95,7 @@ def generate_authorized_keys(config: dict[str, Any]) -> NoReturn:
 
         remote_authorized_keys = user_home_dir + "/.ssh/authorized_keys"
         remote_command = f"""echo -e '{restricted}\\n' | ssh {host} 'cat >> {remote_authorized_keys}'"""
-        logging.info(f"Or this all-in-one command:\n{remote_command}")
+        logging.info(f"You can try this all-in-one command:\n{remote_command}")
     sys.exit(0)
 
 
@@ -109,7 +110,7 @@ def generate_default_config() -> None:
     y["borg_prune_arguments"].append(f"--prefix {y['prefix']}")
 
     default_config = get_conf_directory() / "default.yml"
-    logging.info("Please make a backup of the passphrase!")
+    logging.warning("IMPORTANT! Make a backup of the passphrase!")
     if default_config.exists():
         logging.warning(f"{default_config} already exists. Not overwriting. "
                         "Please create a new config file by redirecting this output to"

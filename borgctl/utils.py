@@ -9,9 +9,9 @@ from typing import Tuple, NoReturn, Any
 
 
 BORG_COMMANDS = [
-    'break-lock', 'check', 'compact', 'config', 'create',
-    'delete', 'diff', 'extract', 'export-tar', 'import-tar', 'info',
-    'init', 'key', 'list', 'mount', 'prune', 'rename', 'umount', 'upgrade'
+    'break-lock', 'check', 'compact', 'config', 'create', 'delete',
+    'diff', 'extract', 'export-tar', 'import-tar', 'info', 'init',
+    'key', 'list', 'mount', 'prune', 'rename', 'umount', 'upgrade', 'with-lock'
 ]
 
 remembered_password = ""

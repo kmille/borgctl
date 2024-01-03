@@ -36,12 +36,12 @@ def execute_borg(cmd: list[str], env: dict[str, str]) -> int:
 
 def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], config_file: Path, args: list[str]) -> int:
 
-    cmd = [config["borg_binary"], "--verbose", command]
+    cmd = [config["borg_binary"], "--verbose", "--progress", command]
     if command == "create":
         args = prepare_borg_create(config, args)
     elif command == "import-tar":
         cmd.append(get_new_archive_name(config))
-    elif command == "config":
+    elif command in ("config", "with-lock"):
         cmd.append(config["repository"])
     elif command == "key" and "change-passphrase" in args:
         env = handle_change_passphrase(config, env, config_file)

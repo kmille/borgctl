@@ -8,7 +8,7 @@ from typing import Any, Tuple, NoReturn
 
 from borgctl.utils import write_state_file, get_conf_directory, \
     load_config, BORG_COMMANDS, fail, write_logging_config, get_new_archive_name, \
-    print_docs_url, ask_for_passphrase, handle_change_passphrase
+    print_docs_url, ask_for_passphrase, ask_for_new_passphrase
 
 from borgctl.tools import show_version, show_config_files, \
     handle_ssh_key, generate_authorized_keys, generate_default_config
@@ -36,7 +36,7 @@ def execute_borg(cmd: list[str], env: dict[str, str]) -> int:
 
 def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], config_file: Path, args: list[str]) -> int:
 
-    # TODO: this function needs a refactory -:-
+    # TODO: this function needs a refactor -:-
 
     cmd = [config["borg_binary"], "--verbose", command]
     if command == "create":
@@ -46,7 +46,7 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
     elif command in ("config", "init", "with-lock"):
         cmd.append(config["repository"])
     elif command == "key" and "change-passphrase" in args:
-        env = handle_change_passphrase(config, env, config_file)
+        env = ask_for_new_passphrase(config, env, config_file)
 
     key_config_file = f"borg_{command}_arguments"
     if key_config_file in config:
@@ -55,7 +55,7 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
             for word in argument.split():
                 cmd.append(word)
 
-    env = ask_for_passphrase(config, env, args)
+    env = ask_for_passphrase(config, env, command, config_file, args)
 
     if command in ("create", "compact"):
         args.append("--progress")
@@ -209,10 +209,9 @@ def main() -> NoReturn:
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        if __name__ == '__main__':
-            raise
-        else:
-            fail(e)
+        print(e)
+        raise
+        fail(e)
     finally:
         sys.exit(return_code)
 

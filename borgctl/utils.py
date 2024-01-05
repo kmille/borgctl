@@ -14,7 +14,7 @@ BORG_COMMANDS = [
     'key', 'list', 'mount', 'prune', 'rename', 'umount', 'upgrade', 'with-lock'
 ]
 
-remembered_password = ""
+remembered_passphrase = ""
 
 
 def fail(msg: str | Exception, code: int = 1) -> NoReturn:
@@ -185,38 +185,27 @@ def print_docs_url(command: str) -> None:
     print(f"Check out the docs: {url}")
 
 
-def ask_for_passphrase(config: dict[str, Any], env: dict[str, str], args: list[str]) -> dict[str, str]:
+def ask_for_passphrase(config: dict[str, Any], env: dict[str, str], command: str, config_file: Path, args: list[str]) -> dict[str, str]:
     """check if we need to ask the user for the passphrase"""
 
     is_help = "--help" in args
     if is_help or config["passphrase"] not in ("ask", "ask-always"):
         return env
 
-    global remembered_password
+    global remembered_passphrase
 
-    if config["passphrase"] == "ask" and remembered_password != "":
-        passphrase = remembered_password
+    if config["passphrase"] == "ask" and remembered_passphrase != "":
+        passphrase = remembered_passphrase
         logging.info("Using previously entered password")
     else:
-        passphrase = getpass(f"Please enter the borg passphrase for {config['repository']}: ")
-        remembered_password = passphrase
+        if command == "init":
+            return ask_for_new_passphrase(config, env, config_file)
+        else:
+            passphrase = getpass(f"Please enter the borg passphrase for {config['repository']}: ")
+            remembered_passphrase = passphrase
 
     env.update({"BORG_PASSPHRASE": passphrase})
     return env
-
-
-def update_config_sshkey(ssh_key_location: str, config_file: Path) -> None:
-    try:
-        yaml = YAML()
-        yaml.default_flow_style = False
-        yaml.preserve_quotes = True
-        config = yaml.load(config_file)
-        if config["ssh_key"] != ssh_key_location:
-            config["ssh_key"] = ssh_key_location
-            yaml.dump(config, config_file)
-            logging.info(f"Updated ssh_key in {config_file}")
-    except YAMLError as e:
-        fail(f"Could not parse yaml in {config_file}: {e}")
 
 
 def update_config_passphrase(passphrase: str, config_file: Path) -> None:
@@ -234,12 +223,29 @@ def update_config_passphrase(passphrase: str, config_file: Path) -> None:
         fail(f"Could not parse yaml in {config_file}: {e}")
 
 
-def handle_change_passphrase(config: dict[str, Any], env: dict[str, str], config_file: Path) -> dict[str, str] | NoReturn:
+def ask_for_new_passphrase(config: dict[str, Any], env: dict[str, str], config_file: Path) -> dict[str, str] | NoReturn:
     passphrase1 = getpass(f"Please enter the new borg passphrase for repository {config['repository']}: ")
     passphrase2 = getpass(f"Please re-enter the new borg passphrase for repository {config['repository']}: ")
     if passphrase1 != passphrase2:
-        fail("Passwords missmatch")
+        fail("Passphrase missmatch")
     else:
         env.update({"BORG_NEW_PASSPHRASE": passphrase1})
-        update_config_passphrase(passphrase1, config_file)
+        if config["passphrase"] not in ("ask", "ask-always"):
+            update_config_passphrase(passphrase1, config_file)
         return env
+
+
+def update_config_sshkey(ssh_key_location: str, config_file: Path) -> None:
+    try:
+        yaml = YAML()
+        yaml.default_flow_style = False
+        yaml.preserve_quotes = True
+        config = yaml.load(config_file)
+        if config["ssh_key"] != ssh_key_location:
+            config["ssh_key"] = ssh_key_location
+            yaml.dump(config, config_file)
+            logging.info(f"Updated ssh_key in {config_file}")
+    except YAMLError as e:
+        fail(f"Could not parse yaml in {config_file}: {e}")
+
+

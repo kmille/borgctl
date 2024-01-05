@@ -43,7 +43,7 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
         args = prepare_borg_create(config, args)
     elif command == "import-tar":
         cmd.append(get_new_archive_name(config))
-    elif command in ("config", "with-lock"):
+    elif command in ("config", "init", "with-lock"):
         cmd.append(config["repository"])
     elif command == "key" and "change-passphrase" in args:
         env = handle_change_passphrase(config, env, config_file)
@@ -57,8 +57,12 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
 
     env = ask_for_passphrase(config, env, args)
 
-    if command in ("compact"):
-        command.append("--progress")
+    if command in ("create", "compact"):
+        args.append("--progress")
+    if command in ("create"):
+        args.append("--stats")
+    if command in ("prune", ):
+        args.append("--list")
 
     # sorting breaks things like --storage 100G
     #for arg in args:
@@ -84,8 +88,6 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
             # mount ::archive: only add mount point
             mount_point = Path(config["mount_point"]).expanduser().as_posix()
             cmd.append(mount_point)
-    elif command == "init":
-        cmd.append(config["repository"])
     elif command == "export-tar" and "--help" not in args:
         if len(args) < 2:
             fail("The export-tar command needs two arguments (plus optional parameters like --tar-filter): ::archive <outputfile>")

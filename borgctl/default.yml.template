@@ -12,13 +12,10 @@ borg_create_excludes:
   - ".cache"
 
 borg_create_arguments:
-  - "--progress"
-  - "--stats"
   - "--one-file-system"
   - "--compression=lz4"
 
 borg_prune_arguments:
-  - "--list"
   - "--keep-last 10"
   - "--dry-run"
 

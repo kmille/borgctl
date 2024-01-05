@@ -107,7 +107,6 @@ def generate_default_config() -> None:
     y = yaml.load(config_template)
     y["prefix"] = socket.gethostname()
     y["passphrase"] = get_passphrase()
-    y["borg_prune_arguments"].append(f"--prefix {y['prefix']}")
 
     default_config = get_conf_directory() / "default.yml"
     logging.warning("IMPORTANT! Make a backup of the passphrase!")

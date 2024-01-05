@@ -8,7 +8,7 @@ from typing import Any, Tuple, NoReturn
 
 from borgctl.utils import write_state_file, get_conf_directory, \
     load_config, BORG_COMMANDS, fail, write_logging_config, get_new_archive_name, \
-    print_docs_url, handle_manual_passphrase, handle_change_passphrase
+    print_docs_url, ask_for_passphrase, handle_change_passphrase
 
 from borgctl.tools import show_version, show_config_files, \
     handle_ssh_key, generate_authorized_keys, generate_default_config
@@ -55,7 +55,7 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
             for word in argument.split():
                 cmd.append(word)
 
-    env = handle_manual_passphrase(config, env)
+    env = ask_for_passphrase(config, env, args)
 
     if command in ("compact"):
         command.append("--progress")

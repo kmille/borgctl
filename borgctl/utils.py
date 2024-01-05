@@ -185,10 +185,11 @@ def print_docs_url(command: str) -> None:
     print(f"Check out the docs: {url}")
 
 
-def handle_manual_passphrase(config: dict[str, Any], env: dict[str, str]) -> dict[str, str]:
+def ask_for_passphrase(config: dict[str, Any], env: dict[str, str], args: list[str]) -> dict[str, str]:
     """check if we need to ask the user for the passphrase"""
 
-    if config["passphrase"] not in ("ask", "ask-always"):
+    is_help = "--help" in args
+    if is_help or config["passphrase"] not in ("ask", "ask-always"):
         return env
 
     global remembered_password

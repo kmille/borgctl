@@ -36,7 +36,9 @@ def execute_borg(cmd: list[str], env: dict[str, str]) -> int:
 
 def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], config_file: Path, args: list[str]) -> int:
 
-    cmd = [config["borg_binary"], "--verbose", "--progress", command]
+    # TODO: this function needs a refactory -:-
+
+    cmd = [config["borg_binary"], "--verbose", command]
     if command == "create":
         args = prepare_borg_create(config, args)
     elif command == "import-tar":
@@ -55,12 +57,18 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
 
     env = handle_manual_passphrase(config, env)
 
+    if command in ("compact"):
+        command.append("--progress")
+
+    # sorting breaks things like --storage 100G
+    #for arg in args:
+    #    if arg.startswith("-"):
+    #        cmd.append(arg)
+    #for arg in args:
+    #    if not arg.startswith("-"):
+    #        cmd.append(arg)
     for arg in args:
-        if arg.startswith("-"):
-            cmd.append(arg)
-    for arg in args:
-        if not arg.startswith("-"):
-            cmd.append(arg)
+        cmd.append(arg)
 
     if command == "umount":
         if len(args) == 0:

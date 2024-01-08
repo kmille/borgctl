@@ -36,6 +36,13 @@ def get_log_directory() -> Path:
     return log_dir
 
 
+def init_logging() -> None:
+    config_file = get_conf_directory() / "logging.conf"
+    if not config_file.exists():
+        write_logging_config()
+    logging.config.fileConfig(config_file)
+
+
 def get_conf_directory() -> Path:
     # https://specifications.freedesktop.org/basedir-spec/latest/ar01s03.html
     if os.getuid() == 0:
@@ -62,8 +69,8 @@ def write_state_file(config: dict[str, Any], config_file: Path, command: str) ->
 
 
 def check_config(config: dict[str, Any]) -> None:
-    config_keys = ['repository', 'ssh_key', 'prefix', 'passphrase', 'mount_point', 'borg_create_backup_dirs', 'borg_create_excludes',
-                   'borg_create_arguments', 'borg_prune_arguments', 'envs', 'borg_binary', 'cron_commands', 'state_commands']
+    config_keys = ['repository', 'ssh_key', 'prefix', 'passphrase', 'mount_point', 'borg_create_backup_dirs',
+                   'borg_create_excludes', 'envs', 'borg_binary', 'cron_commands', 'state_commands']
     for config_key in config_keys:
         if config_key not in config:
             fail(f"'{config_key}' not specified in config file")
@@ -96,9 +103,26 @@ def check_config(config: dict[str, Any]) -> None:
 
 
 def load_config(config_file: Path) -> Tuple[dict[str, str], dict[str, Any]]:
+    def setup_env():
+        env = {
+            "BORG_PASSPHRASE": config["passphrase"],
+            "BORG_REPO": config["repository"],
+            "BORG_LOGGING_CONF": (get_conf_directory() / "logging.conf").as_posix(),
+        }
+        if config["ssh_key"] != "":
+            env.update({
+                "BORG_RSH": f"ssh -i {config['ssh_key']}",
+            })
+            if "BORG_RSH" in config["envs"]:
+                fail("Specifying ssh_key and BORG_RSH clashes. Not supported. Could not apply your BORG_RSH. "
+                     "Please clear ssh_key in the config and specify the ssh key via BORG_RSH (add -i <path ssh key>)")
+        env.update(config["envs"])
+        return env
+
     logging.info(f"\aUsing config file {config_file}")
     if not config_file.exists():
-        fail(f"Could not load config file {config_file}\nPlease use --generate-default-config to create a default config")
+        fail(f"Could not load config. File {config_file} does not exist. Please use --list to list "
+             "all config files or --generate-default-config to create a default config")
 
     yaml = YAML(typ="safe")
     try:
@@ -107,24 +131,9 @@ def load_config(config_file: Path) -> Tuple[dict[str, str], dict[str, Any]]:
         fail(f"Could not parse yaml in {config_file}: {e}")
 
     check_config(config)
-
-    repository = config["repository"]
-    if repository.count(":") == 0:
-        config["repository"] = Path(repository).expanduser().as_posix()
-    env = {
-        "BORG_PASSPHRASE": config["passphrase"],
-        "BORG_REPO": config["repository"],
-        "BORG_LOGGING_CONF": (get_conf_directory() / "logging.conf").as_posix(),
-    }
-
-    if config["ssh_key"] != "":
-        env.update({
-            "BORG_RSH": f"ssh -i {config['ssh_key']}",
-        })
-        if "BORG_RSH" in config["envs"] and "-i" not in config["envs"]["BORG_RSH"]:
-            logging.warning("Could not set ssh key via BORG_RSH. You have to specify it manually it via RSH")
-    env.update(config["envs"])
-
+    if config["repository"].count(":") == 0:
+        config["repository"] = Path(config["repository"]).expanduser().as_posix()
+    env = setup_env()
     return env, config
 
 
@@ -161,13 +170,12 @@ format=%(asctime)s %(levelname)s %(message)s
 datefmt=
 class=logging.Formatter"""
 
-    logging_file_location = get_conf_directory() / "logging.conf"
+    log_conf_file = get_conf_directory() / "logging.conf"
+    log_conf_file.write_text(logging_config)
+    print(f"Wrote logging configuration to {log_conf_file}")
 
-    if not logging_file_location.exists():
-        logging_file_location.write_text(logging_config)
 
-
-def get_new_archive_name(config: dict[str, str]) -> str:
+def get_new_archive_name(config: dict[str, Any]) -> str:
     now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     archive = "::" + config["prefix"] + "_" + now
     return archive
@@ -186,8 +194,6 @@ def print_docs_url(command: str) -> None:
 
 
 def ask_for_passphrase(config: dict[str, Any], env: dict[str, str], command: str, config_file: Path, args: list[str]) -> dict[str, str]:
-    """check if we need to ask the user for the passphrase"""
-
     is_help = "--help" in args
     if is_help or config["passphrase"] not in ("ask", "ask-always"):
         return env
@@ -209,30 +215,35 @@ def ask_for_passphrase(config: dict[str, Any], env: dict[str, str], command: str
 
 
 def update_config_passphrase(passphrase: str, config_file: Path) -> None:
+    yaml = YAML()
+    yaml.default_flow_style = False
+    yaml.preserve_quotes = True
     try:
-        yaml = YAML()
-        yaml.default_flow_style = False
-        yaml.preserve_quotes = True
         config = yaml.load(config_file)
-        if config["passphrase"] in ("ask", "ask-always"):
-            logging.warning("Not updating config file: (ask/ask-always) is used")
-        config["passphrase"] = passphrase
-        yaml.dump(config, config_file)
-        logging.info(f"Updated passphrase in {config_file}")
     except YAMLError as e:
         fail(f"Could not parse yaml in {config_file}: {e}")
 
+    if config["passphrase"] in ("ask", "ask-always"):
+        logging.warning("Not updating passphrase in config file: (ask/ask-always) is used")
+        return
+
+    config["passphrase"] = passphrase
+    try:
+        yaml.dump(config, config_file)
+    except YAMLError as e:
+        fail(f"Could not parse yaml in {config_file}: {e}")
+    logging.info(f"Updated passphrase in {config_file}")
+
 
 def ask_for_new_passphrase(config: dict[str, Any], env: dict[str, str], config_file: Path) -> dict[str, str] | NoReturn:
-    passphrase1 = getpass(f"Please enter the new borg passphrase for repository {config['repository']}: ")
-    passphrase2 = getpass(f"Please re-enter the new borg passphrase for repository {config['repository']}: ")
+    passphrase1 = getpass(f"Please enter the new borg passphrase for repository {config['repository']}:")
+    passphrase2 = getpass(f"Please re-enter the new borg passphrase for repository {config['repository']}:")
     if passphrase1 != passphrase2:
         fail("Passphrase missmatch")
-    else:
-        env.update({"BORG_NEW_PASSPHRASE": passphrase1})
-        if config["passphrase"] not in ("ask", "ask-always"):
-            update_config_passphrase(passphrase1, config_file)
-        return env
+
+    env.update({"BORG_NEW_PASSPHRASE": passphrase1})
+    update_config_passphrase(passphrase1, config_file)
+    return env
 
 
 def update_config_sshkey(ssh_key_location: str, config_file: Path) -> None:
@@ -247,5 +258,3 @@ def update_config_sshkey(ssh_key_location: str, config_file: Path) -> None:
             logging.info(f"Updated ssh_key in {config_file}")
     except YAMLError as e:
         fail(f"Could not parse yaml in {config_file}: {e}")
-
-

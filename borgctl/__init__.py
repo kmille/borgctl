@@ -7,18 +7,11 @@ import logging.config
 from typing import Any, Tuple, NoReturn
 
 from borgctl.utils import write_state_file, get_conf_directory, \
-    load_config, BORG_COMMANDS, fail, write_logging_config, get_new_archive_name, \
-    print_docs_url, ask_for_passphrase, ask_for_new_passphrase
+    load_config, BORG_COMMANDS, fail, get_new_archive_name, \
+    print_docs_url, ask_for_passphrase, ask_for_new_passphrase, init_logging
 
-from borgctl.tools import show_version, show_config_files, \
-    handle_ssh_key, generate_authorized_keys, generate_default_config
-
-
-def init_logging() -> None:
-    config_file = get_conf_directory() / "logging.conf"
-    if not config_file.exists():
-        write_logging_config()
-    logging.config.fileConfig(config_file)
+from borgctl.helper import show_version, show_config_files, \
+    generate_ssh_key, generate_authorized_keys, generate_default_config
 
 
 def execute_borg(cmd: list[str], env: dict[str, str]) -> int:
@@ -32,6 +25,15 @@ def execute_borg(cmd: list[str], env: dict[str, str]) -> int:
         if p.returncode != 0:
             logging.error(f"borg failed with exit code: {p.returncode}")
         return p.returncode
+
+    #try:
+    #    p = subprocess.run(cmd, env=env, check=True, capture_output=True)
+    #    print(p.stderr.decode())
+    #    print(p.stdout.decode())
+    #except subprocess.CalledProcessError as p:
+    #    logging.error(f"borg failed with exit code: {p.returncode}")
+    #finally:
+    #    return p.returncode
 
 
 def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], config_file: Path, args: list[str]) -> int:
@@ -64,13 +66,6 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
     if command in ("prune", ):
         args.append("--list")
 
-    # sorting breaks things like --storage 100G
-    #for arg in args:
-    #    if arg.startswith("-"):
-    #        cmd.append(arg)
-    #for arg in args:
-    #    if not arg.startswith("-"):
-    #        cmd.append(arg)
     for arg in args:
         cmd.append(arg)
 
@@ -95,7 +90,8 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
             cmd.append("::")
 
     return_code = execute_borg(cmd, env)
-    if return_code == 0 and not ("--dry-run" in cmd or "-s" in cmd or "--help" in cmd):
+    dry_run_or_help = "--dry-run" in cmd or "-s" in cmd or "--help" in cmd
+    if return_code == 0 and dry_run_or_help:
         write_state_file(config, config_file, command)
     return return_code
 
@@ -115,7 +111,6 @@ def prepare_borg_create(config: dict[str, Any], cli_arguments: list[str]) -> lis
             logging.warning(f"Backup directory {p} does not exist")
 
     arguments.extend(cli_arguments)
-
     return arguments
 
 
@@ -124,35 +119,41 @@ def run_cron_commands(config: dict[str, Any], env: dict[str, str], config_file: 
     for command in config["cron_commands"]:
         logging.info(f"Running 'borg {command}' in --cron mode")
         ret = run_borg_command(command, env, config, config_file, [])
-        if ret > return_code:
-            return_code = ret
-    if return_code != 0:
-        logging.info(f"Returning with exit code {return_code}")
+        return_code = ret if ret > return_code else return_code
+    logging.info(f"Returning with exit code {return_code} for 'borg --cron' with {config_file}")
     return return_code
 
 
 def parse_arguments() -> Tuple[argparse.ArgumentParser, argparse.Namespace, list[str]]:
-    description = """borgctl is a simple borgbackup wrapper. The working directory is /etc/borgctl for root or XDG_CONFIG_HOME/borgctl or ~/.config/borgctl for non-root users.
-The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME/borgctl or ~/.local/state/borgctl for non-root users."""
-    parser = argparse.ArgumentParser(description=description)
+
+    description = ("borgctl is a simple borgbackup wrapper.\n\nThe working directory is /etc/borgctl/ "
+                   "for root or $XDG_CONFIG_HOME/borgctl or ~/.config/borgctl for non-root users.\n"
+                   "The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME/borgctl or "
+                   "~/.local/state/borgctl for non-root users.")
+    parser = argparse.ArgumentParser(description=description,
+                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument("-l", "--list",
+                        action="store_true",
+                        help=f"list existing borgctl config files in {get_conf_directory()}")
     parser.add_argument("-d", "--generate-default-config",
                         action="store_true",
-                        help="writes default config to $config_dir/default.yml or prints it to stdout if the file already exists")
+                        help=f"write default config to {get_conf_directory()}/default.yml or "
+                              "prints it to stdout if the file already exists")
     parser.add_argument("-s", "--generate-ssh-key",
                         action="store_true",
-                        help="writes a new ed25519 ssh key to ~/.ssh/borg_$config and updates the config file")
+                        help="write a new ed25519 ssh key to ~/.ssh/borg_$config and update the config file")
     parser.add_argument("-a", "--generate-authorized_keys",
                         action="store_true",
-                        help="prints the authorized_keys entry to stdout. You have to add it to the remote host (if you backup over ssh)")
+                        help="print the authorized_keys entry. It also shows the retricted entry")
     parser.add_argument("-c", "--config",
                         action="append",
-                        help="specify the config file to you use. Defaults to default.yml. You can specify multiple config files with -c default.yml -c lokal-disk.yml. If the config file contains a / then a relative/absolute path is asumed. If not, $working_dir/$config will be used")
+                        help="specify the config file to use. Defaults to default.yml. "
+                             "You can specify multiple config files with -c default.yml -c "
+                             "local-disk.yml. If the config file contains a /, then a relative/absolute "
+                             f"path is asumed. If not, {get_conf_directory()}/$config will be used")
     parser.add_argument("--cron",
                         action="store_true",
                         help="run multiple borg commands in a row. The commands to run are specified in the config file (cron_commands)")
-    parser.add_argument("-l", "--list",
-                        action="store_true",
-                        help="list borgctl config files in $config_dir")
     parser.add_argument("--version",
                         action="store_true",
                         help="show version and exit")
@@ -191,7 +192,7 @@ def main() -> NoReturn:
             env, config = load_config(config_file)
 
             if args.generate_ssh_key:
-                handle_ssh_key(config, config_file)
+                generate_ssh_key(config, config_file)
             elif args.generate_authorized_keys:
                 generate_authorized_keys(config)
             elif args.cron:

@@ -26,11 +26,11 @@ def show_config_files() -> NoReturn:
     sys.exit(0)
 
 
-def generate_ssh_key(out_file: Path) -> None:
-    hostname = socket.gethostname()
+def run_ssh_key_gen(out_file: Path) -> None:
     user = os.getlogin()
-    key = out_file.name
-    comment = f"{user}_{key}@{hostname}"
+    conf = out_file.name
+    hostname = socket.gethostname()
+    comment = f"{user}_{conf}@{hostname}"
     cmd = ["ssh-keygen", "-t", "ed25519", "-N", "", "-q", "-f", out_file.as_posix(), "-C", comment]
     logging.info(f"Running {cmd}")
     try:
@@ -40,14 +40,14 @@ def generate_ssh_key(out_file: Path) -> None:
     logging.info(f"Successfully created ssh key {out_file}")
 
 
-def handle_ssh_key(config: dict[str, Any], config_file: Path) -> NoReturn:
+def generate_ssh_key(config: dict[str, Any], config_file: Path) -> NoReturn:
     if config["ssh_key"] == "":
         ssh_key_location = Path(f"~/.ssh/borg_{config_file.stem}").expanduser()
     else:
         ssh_key_location = Path(config["ssh_key"]).expanduser()
 
     if not ssh_key_location.exists():
-        generate_ssh_key(ssh_key_location)
+        run_ssh_key_gen(ssh_key_location)
     else:
         logging.warning(f"ssh key {ssh_key_location} already exists. Not overwriting")
     update_config_sshkey(ssh_key_location.as_posix(), config_file)
@@ -55,12 +55,12 @@ def handle_ssh_key(config: dict[str, Any], config_file: Path) -> NoReturn:
 
 
 def parse_borg_repository(repository: str) -> Tuple[str, str | None, str | None]:
-    host = repo_dir = None
     user = os.getlogin()
+    host = repo_dir = None
     if repository.strip().startswith("ssh://"):
         repository = repository.replace("ssh://", "")
     if repository.count(":") != 1:
-        logging.warning(f"The repository '{repository}' specified in the config file does not use ssh")
+        logging.warning(f"The repository '{repository}' does not use ssh")
     else:
         host, repo_dir = repository.split(":")
         if "@" in host:
@@ -75,19 +75,18 @@ def generate_authorized_keys(config: dict[str, Any]) -> NoReturn:
 
     ssh_pub_key = Path(f"{ssh_key}.pub").expanduser()
     if not ssh_pub_key.exists():
-        fail(f"The ssh_key ('{ssh_pub_key}') specified in the config file does not exist")
+        fail(f"The ssh_key ('{ssh_pub_key}') does not exist")
 
     user, host, repo_dir = parse_borg_repository(config["repository"])
 
     logging.info(f"Using ssh key {ssh_pub_key} from config file")
     pub_key = ssh_pub_key.read_text().strip()
-    logging.info(f"Add this line to authorized_keys:\n{pub_key}\n")
+    logging.info(f"Add this line to authorized_keys:\n{pub_key}")
 
     if repo_dir:
         restricted = f"""command="borg serve --restrict-to-path {repo_dir}",restrict {pub_key}"""
+        print("", file=sys.stderr)
         logging.info(f"Use this line for restricted access:\n{restricted}\n")
-        logging.warning("Please note that you have to initalize a repository with 'borg init --append-only'. "
-                        "Using 'borg serve --append-only' is not enough. Use 'borg config' to check.")
         try:
             user_home_dir = Path(f"~{user}").expanduser().as_posix()
         except RuntimeError:
@@ -108,15 +107,15 @@ def generate_default_config() -> None:
     y["prefix"] = socket.gethostname()
     y["passphrase"] = get_passphrase()
 
-    default_config = get_conf_directory() / "default.yml"
+    default_conf_file = get_conf_directory() / "default.yml"
     logging.warning("IMPORTANT! Make a backup of the passphrase!")
-    if default_config.exists():
-        logging.warning(f"{default_config} already exists. Not overwriting. "
+    if default_conf_file.exists():
+        logging.warning(f"Config {default_conf_file} already exists. Not overwriting. "
                         "Please create a new config file by redirecting this output to"
                         f"{get_conf_directory()}/something.yml (this line is printed to stderr)")
         yaml.dump(y, sys.stdout)
     else:
-        yaml.dump(y, default_config)
-        default_config.chmod(0o600)
-        logging.info(f"Successfully wrote config file to {default_config}")
+        yaml.dump(y, default_conf_file)
+        default_conf_file.chmod(0o600)
+        logging.info(f"Successfully wrote config file to {default_conf_file}")
     sys.exit(0)

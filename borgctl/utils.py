@@ -94,6 +94,12 @@ def check_config(config: dict[str, Any]) -> None:
             if type(config[config_key]) is not list:
                 fail(f"'{config_key}' in config file is not a list")
 
+    if config["prefix"].strip() == "":
+        fail("The prefix is empty. Must be set.")
+
+    if config["repository"].strip() == "":
+        fail("The repository is empty. Must be set.")
+
     binary = Path(config["borg_binary"])
     if not binary.exists():
         fail(f"borg executable not found (specified in config file): {binary}")
@@ -131,8 +137,6 @@ def load_config(config_file: Path) -> Tuple[dict[str, str], dict[str, Any]]:
         fail(f"Could not parse yaml in {config_file}: {e}")
 
     check_config(config)
-    if config["repository"].count(":") == 0:
-        config["repository"] = Path(config["repository"]).expanduser().as_posix()
     env = setup_env()
     return env, config
 
@@ -196,6 +200,10 @@ def print_docs_url(command: str) -> None:
 def ask_for_passphrase(config: dict[str, Any], env: dict[str, str], command: str, config_file: Path, args: list[str]) -> dict[str, str]:
     is_help = "--help" in args
     if is_help or config["passphrase"] not in ("ask", "ask-always"):
+        return env
+
+    if command == "compact" or (command == "check" and "--repository-only" in args):
+        # no password needed, see https://github.com/borgbackup/borg/discussions/8015
         return env
 
     global remembered_passphrase

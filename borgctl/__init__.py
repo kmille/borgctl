@@ -10,7 +10,7 @@ from borgctl.utils import write_state_file, get_conf_directory, \
     load_config, BORG_COMMANDS, fail, get_new_archive_name, \
     print_docs_url, ask_for_passphrase, ask_for_new_passphrase, init_logging
 
-from borgctl.helper import show_version, show_config_files, \
+from borgctl.helper import get_version, show_config_files, \
     generate_ssh_key, generate_authorized_keys, generate_default_config
 
 
@@ -26,29 +26,42 @@ def execute_borg(cmd: list[str], env: dict[str, str]) -> int:
             logging.error(f"borg failed with exit code: {p.returncode}")
         return p.returncode
 
-    #try:
-    #    p = subprocess.run(cmd, env=env, check=True, capture_output=True)
-    #    print(p.stderr.decode())
-    #    print(p.stdout.decode())
-    #except subprocess.CalledProcessError as p:
-    #    logging.error(f"borg failed with exit code: {p.returncode}")
-    #finally:
-    #    return p.returncode
-
 
 def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], config_file: Path, args: list[str]) -> int:
 
-    # TODO: this function needs a refactor -:-
-
+    env = ask_for_passphrase(config, env, command, config_file, args)
     cmd = [config["borg_binary"], "--verbose", command]
-    if command == "create":
-        args = prepare_borg_create(config, args)
-    elif command == "import-tar":
+
+    if command in ("check", "create", "compact"):
+        cmd.append("--progress")
+    if command in ("create"):
+        cmd.append("--stats")
+    if command in ("prune", ):
+        cmd.append("--list")
+
+    if command == "import-tar":
         cmd.append(get_new_archive_name(config))
     elif command in ("config", "init", "with-lock"):
         cmd.append(config["repository"])
     elif command == "key" and "change-passphrase" in args:
         env = ask_for_new_passphrase(config, env, config_file)
+    elif command == "create":
+        args = prepare_borg_create(config, args)
+    elif command == "umount":
+        if len(args) == 0:
+            mount_point = Path(config["mount_point"]).expanduser().as_posix()
+            cmd.append(mount_point)
+    elif command == "mount" and len(args) == 0:
+        # no argument: add :: and mount point to mount all archives
+        if len(args) == 0:
+            cmd.append("::")
+            mount_point = Path(config["mount_point"]).expanduser().as_posix()
+            cmd.append(mount_point)
+    elif command == "export-tar" and "--help" not in args:
+        if len(args) < 2:
+            fail("The export-tar command needs two arguments (plus optional parameters like --tar-filter): ::archive <outputfile>")
+        if len(args) == 1:
+            cmd.append("::")
 
     key_config_file = f"borg_{command}_arguments"
     if key_config_file in config:
@@ -57,37 +70,13 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
             for word in argument.split():
                 cmd.append(word)
 
-    env = ask_for_passphrase(config, env, command, config_file, args)
-
-    if command in ("create", "compact"):
-        args.append("--progress")
-    if command in ("create"):
-        args.append("--stats")
-    if command in ("prune", ):
-        args.append("--list")
-
     for arg in args:
         cmd.append(arg)
 
-    if command == "umount":
-        if len(args) == 0:
-            mount_point = Path(config["mount_point"]).expanduser().as_posix()
-            cmd.append(mount_point)
-    elif command == "mount":
-        if len(args) == 0:
-            # just mount: add :: (latest archive) and mount point
-            cmd.append("::")
-            mount_point = Path(config["mount_point"]).expanduser().as_posix()
-            cmd.append(mount_point)
-        elif len(args) == 1:
-            # mount ::archive: only add mount point
-            mount_point = Path(config["mount_point"]).expanduser().as_posix()
-            cmd.append(mount_point)
-    elif command == "export-tar" and "--help" not in args:
-        if len(args) < 2:
-            fail("The export-tar command needs two arguments (plus optional parameters like --tar-filter): ::archive <outputfile>")
-        if len(args) == 1:
-            cmd.append("::")
+    if command == "mount" and len(args) > 1:
+        # we need mount after the user supplied options
+        mount_point = Path(config["mount_point"]).expanduser().as_posix()
+        cmd.append(mount_point)
 
     return_code = execute_borg(cmd, env)
     dry_run_or_help = "--dry-run" in cmd or "-s" in cmd or "--help" in cmd
@@ -126,7 +115,8 @@ def run_cron_commands(config: dict[str, Any], env: dict[str, str], config_file: 
 
 def parse_arguments() -> Tuple[argparse.ArgumentParser, argparse.Namespace, list[str]]:
 
-    description = ("borgctl is a simple borgbackup wrapper.\n\nThe working directory is /etc/borgctl/ "
+    description = (f"borgctl is a simple borgbackup wrapper. Running version {get_version()}.\n\n"
+                   "The working directory is /etc/borgctl/ "
                    "for root or $XDG_CONFIG_HOME/borgctl or ~/.config/borgctl for non-root users.\n"
                    "The log directory is /var/log/borgctl/ for root or $XDG_STATE_HOME/borgctl or "
                    "~/.local/state/borgctl for non-root users.")
@@ -142,7 +132,7 @@ def parse_arguments() -> Tuple[argparse.ArgumentParser, argparse.Namespace, list
     parser.add_argument("-s", "--generate-ssh-key",
                         action="store_true",
                         help="write a new ed25519 ssh key to ~/.ssh/borg_$config and update the config file")
-    parser.add_argument("-a", "--generate-authorized_keys",
+    parser.add_argument("-a", "--generate-authorized-keys",
                         action="store_true",
                         help="print the authorized_keys entry. It also shows the retricted entry")
     parser.add_argument("-c", "--config",
@@ -178,7 +168,8 @@ def main() -> NoReturn:
     elif args.list:
         show_config_files()
     elif args.version:
-        show_version()
+        print(f"borgctl v{get_version()}")
+        sys.exit(0)
 
     args.config = ["default.yml", ] if not args.config else args.config
 
@@ -210,6 +201,7 @@ def main() -> NoReturn:
     except KeyboardInterrupt:
         pass
     except Exception as e:
+        breakpoint()
         print(e)
         raise
         fail(e)

@@ -12,11 +12,9 @@ from borgctl.utils import fail, get_conf_directory, update_config_sshkey
 from borgctl.wordlist import get_passphrase
 
 
-def show_version() -> NoReturn:
+def get_version() -> str:
     from importlib.metadata import version
-    package = "borgctl"
-    print(f"Running {package} {version(package)}")
-    sys.exit(0)
+    return version("borgctl")
 
 
 def show_config_files() -> NoReturn:
@@ -48,9 +46,11 @@ def generate_ssh_key(config: dict[str, Any], config_file: Path) -> NoReturn:
 
     if not ssh_key_location.exists():
         run_ssh_key_gen(ssh_key_location)
+        if config["ssh_key"] == "":
+            update_config_sshkey(ssh_key_location.as_posix(), config_file)
     else:
         logging.warning(f"ssh key {ssh_key_location} already exists. Not overwriting")
-    update_config_sshkey(ssh_key_location.as_posix(), config_file)
+
     sys.exit(0)
 
 
@@ -108,7 +108,7 @@ def generate_default_config() -> None:
     y["passphrase"] = get_passphrase()
 
     default_conf_file = get_conf_directory() / "default.yml"
-    logging.warning("IMPORTANT! Make a backup of the passphrase!")
+    logging.warning("Plase make a backup of the passphrase. No passphrase, no restore!")
     if default_conf_file.exists():
         logging.warning(f"Config {default_conf_file} already exists. Not overwriting. "
                         "Please create a new config file by redirecting this output to"

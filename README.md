@@ -18,17 +18,17 @@ I prune/compact backups with (needs Yubikey)
 borgctl -c backend1-full.yml -c backend2-full.yml -c backend3-full.yml --cron
 ```
 
-My [i3](https://i3wm.org/) status bar shows a red `B:7d` if my last backup is 7 days old. On servers, I like to `create`, `prune` and `compact` backups by just using `borgctl --cron`. There is also [borgmagic](https://torsion.org/borgmatic/), but it does not handle all my use cases (to admit: I first reinvented the wheel and then stumbled across borgmatic. I also thought it just takes a day to write a small python script ...)
+My [i3](https://i3wm.org/) status bar shows a red `B:7d` if my last backup is 7 days old. On some servers, I like to `create`, `prune` and `compact` backups by just using `borgctl --cron`. There is also [borgmagic](https://torsion.org/borgmatic/), but it does not handle all my use cases (to admit: I first reinvented the wheel and then stumbled across borgmatic. I also thought it just takes a day to write a small python script ...)
 
 ## Features
 
 - Yaml configuration files: Specify what to backup and where to backup
 - Usability: Just call `borgctl create`, `borgctl list`, `borgctl prune`, ...
 - Flexibility: Run borgctl with multiple configuration files to handle different use cases (e. g. backup to multiple remote backends or run `borg create` in append-only-mode and `borg prune/compact` with a Yubikey)
-- Ask the user for the borg passphrase (if you don't want to store it on disk, just specify ask as passphrase in the config file). Re-use the entered password for other remote storage backends (you don't have to re-enter it again)
-- For semi-automated setups: There are some helpers to generate ssh keys and print the authorized_keys entry (with restricted access)
+- Ask the user for the borg passphrase (if you don't want to store it on disk, just specify `ask` as passphrase in the config file). Re-use the entered password for other remote storage backends (you don't have to re-enter it again)
+- For semi-automated setups: There are some helpers to generate ssh keys and print the authorized_keys entry (restrict access to repository)
 - Run multiple borg commands by running  `borgctl --cron` (like `create` + `prune` + `compact`, commands can be specified in the config file)
-- Monitoring: Write a state file (text file with timestamp in) after successfully executing borg commands
+- Monitoring: Write a state file (text file with timestamp) after successfully executing borg commands
 - Logging: Write everything to a log file that automatically rotates
 - Easy to deploy and use
 
@@ -99,9 +99,9 @@ yay borgctl
 
 You can also download borgctl-*any.pkg.tar.zst and install it with `pacman -U`.
 
-## Default location for config files and logging
+## Configuraation
 
-borgctl uses config files. If you run `borgctl`, it expects a default.yml in the config directory. You can specify one or more config files with `-c`/`--config`. If the config file contains a /, the config file is interpreted as relative/absolute path. There is also a logging configuration (logging.conf) stored, which is used by borg and borgctl itself.
+borgctl uses config files. If you run `borgctl` without specifying a config file, it expects a default.yml in the config directory. You can specify one or more config files with `-c`/`--config`. If the config file contains a /, the config file is interpreted as relative/absolute path. There is also a logging configuration (logging.conf) stored, which is used by borg and borgctl itself.
 
 - Default config location for root user: `/etc/borgctl`
 
@@ -112,7 +112,25 @@ The output of borg and borgctl will be written to borg.log. The file gets logrot
 - Default log directory for root user: `/var/log/borgctl/`
 - Default log directory for non-root users: `$XDG_STATE_HOME/borgctl` or `~/.local/state/borgctl`
 
-The state files are also written to the log directory.
+The state files are also written to the log directory. You can use `borgctl --list` to list all config files.
+
+For example:
+```bash
+kmille@linbox:~ sudo borgctl --list
+backend1-append.yml
+...
+
+kmille@linbox:~ sudo borgctl list
+2024-01-09 10:37:17,967  INFO Using config file /etc/borgctl/default.yml
+
+kmille@linbox:~ sudo borgctl -c backend1-append.yml list
+2024-01-09 10:37:55,148  INFO Using config file /etc/borgctl/backend1-append.yml
+
+kmille@linbox:/etc sudo borgctl -c borgctl/backend1-append.yml list
+2024-01-09 10:38:47,498  INFO Using config file borgctl/backend1-append.yml
+```
+
+TODO: print default config file
 
 ## Walkthrough/How borgctl behaves
 
@@ -157,7 +175,13 @@ command="borg serve --restrict-to-path /opt/test-backup",restrict ssh-ed25519 AA
 
 2023-12-26 11:07:47,553  INFO Or this all-in-one command:
 echo -e 'command="borg serve --restrict-to-path /opt/test-backup",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINpVZZjIAzeyGq0oLKVeLzEECoe7RXg6YpAcPIsakboF kmille_borg_default@linbox\n' | ssh backup-host1 'cat >> /home/backuper/.ssh/authorized_keys'
+```
 
+#### List all config files
+
+```bash
+root@linbox:~ borgctl --list
+backend1-append.yml
 ```
 
 #### Running borg commands with borgctl
@@ -217,8 +241,6 @@ For every borg command, you can add command line parameter/arguments in the conf
 
 ```yaml
 borg_create_arguments:
-- "--progress"
-- "--stats"
 - "--one-file-system"
 - "--compression=lz4"
 ```
@@ -255,18 +277,18 @@ drwxr-xr-x root   root          0 Tue, 2023-12-26 10:56:58 usr/bin
 ...
 ```
 
-#### Your daily helper: --cron
+#### Running multiple borg commands with --cron
 
-If you ssh into a server and you know that it uses borgctl, but you don't if there is a special configuration:
+`--cron` is nice if you want to have a cronjob that creates, prunes and compacts backups. In the config file, you can specify which borg commands should be run if `--cron` is supplied:
 
-Use `--list` to check if there are multiple config files or just the default one.
-
-```bash
-root@linbox:~ borgctl --cron
-default.yml
+```yaml
+cron_commands:
+- "create"
+- "prune"
+- "compact"
 ```
 
-ThenIn your daily use, you often want to create a backup, prune old backups and then compact the disk space. You can use borgctl --cron for that:
+Example
 
 ```bash
 root@linbox:~ borgctl --cron
@@ -274,48 +296,19 @@ root@linbox:~ borgctl --cron
 2023-12-26 11:22:06,990  INFO Running 'borg create' in --cron mode
 2023-12-26 11:22:06,990  INFO Executing: BORG_REPO="/root/borg-repo" BORG_LOGGING_CONF="/etc/borgctl/logging.conf" BORG_RSH="ssh -i /root/.ssh/borg_default" BORG_RELOCATED_REPO_ACCESS_IS_OK="yes" /usr/bin/borg --verbose create --progress --stats --one-file-system --compression=lz4 --exclude=.cache ::linbox_2023-12-26_11:22:06 /usr/bin
 2023-12-26 11:22:07,532  INFO Creating archive at "/root/borg-repo::linbox_2023-12-26_11:22:06"
-2023-12-26 11:22:08,246  INFO ------------------------------------------------------------------------------                                                             
-2023-12-26 11:22:08,246  INFO Repository: /root/borg-repo
-2023-12-26 11:22:08,246  INFO Archive name: linbox_2023-12-26_11:22:06
-2023-12-26 11:22:08,247  INFO Archive fingerprint: 9be95c7822b2e195fbcdfa63787d20ceb13ba04a7d560d627f2f92941e1dc23e
-2023-12-26 11:22:08,247  INFO Time (start): Tue, 2023-12-26 11:22:07
-2023-12-26 11:22:08,247  INFO Time (end):   Tue, 2023-12-26 11:22:08
-2023-12-26 11:22:08,247  INFO Duration: 0.57 seconds
-2023-12-26 11:22:08,248  INFO Number of files: 3869
-2023-12-26 11:22:08,248  INFO Utilization of max. archive size: 0%
-2023-12-26 11:22:08,248  INFO ------------------------------------------------------------------------------
-2023-12-26 11:22:08,249  INFO                        Original size      Compressed size    Deduplicated size
-2023-12-26 11:22:08,249  INFO This archive:                1.55 GB            777.29 MB                696 B
-2023-12-26 11:22:08,249  INFO All archives:                6.20 GB              3.12 GB            784.13 MB
-2023-12-26 11:22:08,250  INFO 
-2023-12-26 11:22:08,250  INFO                        Unique chunks         Total chunks
-2023-12-26 11:22:08,250  INFO Chunk index:                    4338                17312
-2023-12-26 11:22:08,250  INFO ------------------------------------------------------------------------------
+...
 2023-12-26 11:22:08,338  INFO Updated state file /var/log/borgctl/borg_state_default_create.txt
-
 
 2023-12-26 11:22:08,338  INFO Running 'borg prune' in --cron mode
 2023-12-26 11:22:08,338  INFO Executing: BORG_REPO="/root/borg-repo" BORG_LOGGING_CONF="/etc/borgctl/logging.conf" BORG_RSH="ssh -i /root/.ssh/borg_default" BORG_RELOCATED_REPO_ACCESS_IS_OK="yes" /usr/bin/borg --verbose prune --list --keep-last 10
 2023-12-26 11:22:08,898  INFO Keeping archive (rule: secondly #1):     linbox_2023-12-26_11:22:06           Tue, 2023-12-26 11:22:07 [9be95c7822b2e195fbcdfa63787d20ceb13ba04a7d560d627f2f92941e1dc23e]
-2023-12-26 11:22:08,898  INFO Keeping archive (rule: secondly #2):     linbox_2023-12-26_11:21:35           Tue, 2023-12-26 11:21:35 [f8ee55d4340fa76d72d876cc43d92012f199692802a473d766881c45ae1b46bf]
-2023-12-26 11:22:08,898  INFO Keeping archive (rule: secondly #3):     linbox_2023-12-26_11:15:42           Tue, 2023-12-26 11:15:43 [4599ac310b99703407600bc8bfa58ddb80da7be3d613b49fdf75691b99d293e0]
-2023-12-26 11:22:08,898  INFO Keeping archive (rule: secondly #4):     linbox_2023-12-26_11:11:35           Tue, 2023-12-26 11:11:35 [079e9c226455ff1b816be986bf49029c3cdf28ec04e9f6bf2d387ea9a4f24d87]
+2023-12-26 11:22:08,898  INFO Keeping archive (rule: secondly #2):     linbox_2023-12-26_11:21:35           Tue, 2023-12-26 
 2023-12-26 11:22:08,969  INFO Updated state file /var/log/borgctl/borg_state_default_prune.txt
-
 
 2023-12-26 11:22:08,970  INFO Running 'borg compact' in --cron mode
 2023-12-26 11:22:08,970  INFO Executing: BORG_REPO="/root/borg-repo" BORG_LOGGING_CONF="/etc/borgctl/logging.conf" BORG_RSH="ssh -i /root/.ssh/borg_default" BORG_RELOCATED_REPO_ACCESS_IS_OK="yes" /usr/bin/borg --verbose compact
 2023-12-26 11:22:09,459  INFO compaction freed about 1.48 kB repository space.
 root@linbox:~ 
-```
-
-In the config file, you can specify which borg commands should be run if --cron is supplied:
-
-```yaml
-cron_commands:
-- "create"
-- "prune"
-- "compact"
 ```
 
 #### Monitoring borg: state files
@@ -338,14 +331,18 @@ If you don't want to keep your borg passphrase on your disk, you can use `ask` o
 
 ### Misc
 
-In config file, you can specify the borg binary (borg_binary) used for invocation. You can also add environment variables. If you need help for a borg command, you can just add `help` (like `borgctl list help`). You can change default arguments for specific borg commands by adding/modifying `borg_$command_arguments` in the config file (like `borg_create_arguments`).
+In the config file, you can specify the borg binary (borg_binary) used for invocation. You can also add environment variables. If you need help for a borg command, you can just add `help` (like `borgctl list help`). You can change default arguments for specific borg commands by adding/modifying `borg_$command_arguments` in the config file (like `borg_prune_arguments`).
 
 ### Using the Yubikey for authentication
 If you want to authenticate with a Yubikey without touching `~/.ssh/config`, you can keep `ssh_key` empty and add
 ```yaml
 "BORG_RSH": "ssh -I /usr/lib64/pkcs11/opensc-pkcs11.so -o ForwardAgent=no -o IdentityAgent=no"
 ```
-as environment variable in the config file.
+as environment variable in the config file. But can also stay with your `.ssh/config` if you like.
+
+#### Logging
+
+In the config directory you will find a file called logging.conf. It is used by borgctl and borg itself for logging. It prints everything to stderr and logs everything in a log file, which can be found in the log directory. The log file gets rotated automatically after 1 megabyte. Docs can be found [here](https://docs.python.org/3/library/logging.config.html#logging.config.fileConfig) and [here](https://docs.python.org/3/library/logging.handlers.html#logging.handlers.RotatingFileHandler). [Here](https://borgbackup.readthedocs.io/en/stable/usage/general.html#logging) are the docs from borgbackup about logging.
 
 ### Monitoring with py3status
 

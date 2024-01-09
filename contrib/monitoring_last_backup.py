@@ -14,7 +14,7 @@ class Py3status:
 
         for state_file in self.log_dir.glob("borg_state*_create.txt"):
             backup_date = state_file.read_text()
-            backup_date = datetime.datetime.now().strptime(backup_date, "%Y-%m-%d_%H:%M:%S")
+            backup_date = datetime.datetime.strptime(backup_date, "%Y-%m-%d_%H:%M:%S")
             diff = now - backup_date
             if diff.days < days_last_backup:
                 days_last_backup = diff.days

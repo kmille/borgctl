@@ -6,7 +6,7 @@ from ruamel.yaml import YAML
 from json import loads
 
 
-from borgctl.tools import generate_default_config
+from borgctl.helper import generate_default_config
 from borgctl import run_borg_command
 import borgctl
 

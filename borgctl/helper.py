@@ -17,9 +17,10 @@ def get_version() -> str:
     return version("borgctl")
 
 
-def show_config_files() -> NoReturn:
+def show_config_files(config_filter: str) -> NoReturn:
+    config_filter = f"*{config_filter}*" if config_filter != "*.yml" else config_filter
     config_dir = get_conf_directory()
-    for file in config_dir.glob("*.yml"):
+    for file in sorted(config_dir.glob(config_filter)):
         print(file.name)
     sys.exit(0)
 

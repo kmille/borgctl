@@ -1,4 +1,4 @@
-from borgctl.tools import parse_borg_repository
+from borgctl.helper import parse_borg_repository
 import pytest
 import os
 

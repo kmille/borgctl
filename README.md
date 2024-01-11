@@ -1,8 +1,8 @@
-## borgctl - borgbackup without bash scripts
+# borgctl - borgbackup without bash scripts
 
 [borgbackup](https://www.borgbackup.org/) is cool and easy to use. But we all end up writing bash scripts for creating/listing/pruning/checking/... backups. borgctl is a borg wrapper that uses yaml configuration files to make life a bit easier.
 
-## Motivation (my use cases)
+# Motivation (my use cases)
 
 I don't want to write a bash script on every server to make backups. I don't want to have an extra script for listing/pruning backups. I want to backup to multiple storage backends. I backup different things to different remote backends (money constraint). I don't want to store my borg passphrase on disk. I also don't want to enter it for every backend. I want to make backups in append-only-mode. To prune/compact backups, Yubikey authentication is mandatory. I want to see when my last backup was done (monitoring). I want usability and easy deployment.
 
@@ -20,7 +20,7 @@ borgctl -c backend1-full.yml -c backend2-full.yml -c backend3-full.yml --cron
 
 My [i3](https://i3wm.org/) status bar shows a red `B:7d` if my last backup is 7 days old. On some servers, I like to `create`, `prune` and `compact` backups by just using `borgctl --cron`. There is also [borgmagic](https://torsion.org/borgmatic/), but it does not handle all my use cases (to admit: I first reinvented the wheel and then stumbled across borgmatic. I also thought it just takes a day to write a small python script ...)
 
-## Features
+# Features
 
 - Yaml configuration files: Specify what to backup and where to backup
 - Usability: Just call `borgctl create`, `borgctl list`, `borgctl prune`, ...
@@ -32,11 +32,11 @@ My [i3](https://i3wm.org/) status bar shows a red `B:7d` if my last backup is 7 
 - Logging: Write everything to a log file that automatically rotates
 - Easy to deploy and use
 
-## Quickstart
+# Quickstart
 
 - TODO: ascinema
 
-## Usage
+# Usage
 
 ```bash
 kmille@linbox:~ sudo borgctl --version
@@ -67,7 +67,7 @@ options:
   --version             show version and exit
 ```
 
-## Installation
+# Installation
 
 You can find the latest release on the [Github Release](https://github.com/kmille/borgctl/releases) page. There are different ways to get borgctl up and running.
 
@@ -99,7 +99,7 @@ yay borgctl
 
 You can also download borgctl-*any.pkg.tar.zst and install it with `pacman -U`.
 
-## Configuraation
+# Configuration
 
 borgctl uses config files. If you run `borgctl` without specifying a config file, it expects a default.yml in the config directory. You can specify one or more config files with `-c`/`--config`. If the config file contains a /, the config file is interpreted as relative/absolute path. There is also a logging configuration (logging.conf) stored, which is used by borg and borgctl itself.
 
@@ -132,7 +132,7 @@ kmille@linbox:/etc sudo borgctl -c borgctl/backend1-append.yml list
 
 TODO: print default config file
 
-## Walkthrough/How borgctl behaves
+# Walkthrough/How borgctl behaves
 
 borgctl needs a configuration file. If you run it without specifying one, a default.yml in the default config location is expected to exist. If you run it and there is no default.yml, you can use `--generate-default-config` to create one:
 
@@ -147,7 +147,9 @@ root@linbox:~ borgctl --generate-default-config
 2023-12-26 10:59:28,112  INFO Successfully wrote config file to /etc/borgctl/default.yml
 ```
 
-`/etc/borgctl/default.yml` is just a copy of the [default config file](https://github.com/kmille/borgctl/blob/main/borgctl/default.yml.template). A new diceware password for the borg passphrase is generated. It's crucial to make a backup of the passphrase! The hostname is used as borg prefix. borgctl can generate a ssh key for you:
+`/etc/borgctl/default.yml` is based on the [default config file](https://github.com/kmille/borgctl/blob/main/borgctl/default.yml.template) and gets new diceware-like password for the borg passphrase . Also the hostname is set as borg prefix. It's crucial to make a backup of the passphrase! 
+
+#### Generating ssh keys
 
 ```bash
 root@linbox:~ borgctl --generate-ssh-key
@@ -159,9 +161,9 @@ root@linbox:~ cat /root/.ssh/borg_default.pub
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINpVZZjIAzeyGq0oLKVeLzEECoe7RXg6YpAcPIsakboF kmille_borg_default@linbox
 ```
 
-If you specify a ssh key in the config file, it will be used as output file (if it does not exist). If not, the default name for the ssh key is `$current_username_borg_$config_prefix`.
+If you specify a ssh key in the config file, it will be used as output file (if it does not exist). If not, the default name for the ssh key is `$currentUsername_borg_$configPrefix`.
 
-borgctl can also generate your authorized_keys entry:
+#### Generating authorized_keys entry
 
 ```bash
 root@linbox:~ borgctl --generate-authorized_keys
@@ -182,6 +184,13 @@ echo -e 'command="borg serve --restrict-to-path /opt/test-backup",restrict ssh-e
 ```bash
 root@linbox:~ borgctl --list
 backend1-append.yml
+backend2-append.yml
+backend1-full.yml
+backend2-full.yml
+
+root@linbox:~ borgctl --list full
+backend1-full.yml
+backend2-full.yml
 ```
 
 #### Running borg commands with borgctl
@@ -313,7 +322,7 @@ root@linbox:~
 
 #### Monitoring borg: state files
 
-bortctl also writes state files, if a borg command runs successfully. It contains the current date. You can use it for monitoring. State files are written to the log directory. The format is`borg_state__$config_file_prefix_$borg_command.txt`. In the config file you can specify a list of commands for which a state file should be created.
+borgctl also writes state files, if a borg command runs successfully. It contains the current date. You can use it for monitoring. State files are written to the log directory. The format is `borg_state__$config_file_prefix_$borg_command.txt`. In the config file you can specify a list of commands for which a state file should be created.
 
 ```yaml
 state_commands:
@@ -338,12 +347,19 @@ If you want to authenticate with a Yubikey without touching `~/.ssh/config`, you
 ```yaml
 "BORG_RSH": "ssh -I /usr/lib64/pkcs11/opensc-pkcs11.so -o ForwardAgent=no -o IdentityAgent=no"
 ```
-as environment variable in the config file. But can also stay with your `.ssh/config` if you like.
+as environment variable in the config file. But you can also stay with your `.ssh/config` if you like.
 
 #### Logging
 
-In the config directory you will find a file called logging.conf. It is used by borgctl and borg itself for logging. It prints everything to stderr and logs everything in a log file, which can be found in the log directory. The log file gets rotated automatically after 1 megabyte. Docs can be found [here](https://docs.python.org/3/library/logging.config.html#logging.config.fileConfig) and [here](https://docs.python.org/3/library/logging.handlers.html#logging.handlers.RotatingFileHandler). [Here](https://borgbackup.readthedocs.io/en/stable/usage/general.html#logging) are the docs from borgbackup about logging.
+In the config directory you will find a file called logging.conf. It is used by borgctl and borg itself for logging. The borg output (stdout and stderr) is printed to stdout, the borgctl output is printed to stderr. Everything gets logged to borg.log, which can be found in the log directory. The log file gets rotated automatically after reaching 1 megabyte. Docs can be found [here](https://docs.python.org/3/library/logging.config.html#logging.config.fileConfig) and [here](https://docs.python.org/3/library/logging.handlers.html#logging.handlers.RotatingFileHandler). [Here](https://borgbackup.readthedocs.io/en/stable/usage/general.html#logging) are the docs from borgbackup about logging.
 
 ### Monitoring with py3status
 
-I use [monitoring_last_backup.py](https://github.com/kmille/borgctl/blob/main/contrib/monitoring_last_backup.py) with [py3status](https://github.com/ultrabug/py3status) on my laptop. It shows `B:3d` when my last backup was 3 days ago. The color changes from green to red after 7 days. You can run python3 monitoring_last_backup.py to test it.
+I use [monitoring_last_backup.py](https://github.com/kmille/borgctl/blob/main/contrib/monitoring_last_backup.py) with [py3status](https://github.com/ultrabug/py3status) on my laptop. It shows `B:3d` when my last backup was 3 days ago. The color changes from green to red after 7 days. You can run `python3 monitoring_last_backup.py` to test it.
+
+# Development
+
+You need [poetry](https://python-poetry.org/docs/basic-usage/). Get get started, use `poetry install`. Then you can run `poetry run borgctl --help`. The code can be found in the borgctl directory. Deployment/monitoring stuff is in the contrib directory. Tests can be run with `poetry run pytest tests -s -v -x`.  To run the mypy checks, run `poetry run mypy`. Mypy is configured in `pyproject.toml`. 
+
+
+

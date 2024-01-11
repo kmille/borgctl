@@ -123,7 +123,8 @@ def parse_arguments() -> Tuple[argparse.ArgumentParser, argparse.Namespace, list
     parser = argparse.ArgumentParser(description=description,
                                      formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-l", "--list",
-                        action="store_true",
+                        nargs='?',
+                        const="*.yml",
                         help=f"list existing borgctl config files in {get_conf_directory()}")
     parser.add_argument("-d", "--generate-default-config",
                         action="store_true",
@@ -166,7 +167,7 @@ def main() -> NoReturn:
     if args.generate_default_config:
         generate_default_config()
     elif args.list:
-        show_config_files()
+        show_config_files(args.list)
     elif args.version:
         print(f"borgctl v{get_version()}")
         sys.exit(0)
@@ -201,7 +202,6 @@ def main() -> NoReturn:
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        breakpoint()
         print(e)
         raise
         fail(e)

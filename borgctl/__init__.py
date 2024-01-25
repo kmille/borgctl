@@ -22,8 +22,10 @@ def execute_borg(cmd: list[str], env: dict[str, str]) -> int:
     with subprocess.Popen(cmd, env=env, bufsize=1,
                           stdout=sys.stdout, stderr=sys.stdout) as p:
         p.wait()
-        if p.returncode != 0:
-            logging.error(f"borg failed with exit code: {p.returncode}")
+        if p.returncode == 0:
+            logging.info(f"borg returned successfully with exit code {p.returncode}")
+        else:
+            logging.error(f"borg failed with exit code {p.returncode}")
         return p.returncode
 
 

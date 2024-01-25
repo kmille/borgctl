@@ -204,8 +204,10 @@ def main() -> NoReturn:
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        print(e)
-        raise
+        import traceback
+        logging.error("Oh no an exception occured")
+        logging.error("Please report it: https://github.com/kmille/borgctl/issues")
+        logging.error(traceback.format_exc())
         fail(e)
     finally:
         sys.exit(return_code)

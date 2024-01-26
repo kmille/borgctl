@@ -133,8 +133,10 @@ def load_config(config_file: Path) -> Tuple[dict[str, str], dict[str, Any]]:
     yaml = YAML(typ="safe")
     try:
         config = yaml.load(config_file)
+        if not config:
+            raise YAMLError("File is empty")
     except YAMLError as e:
-        fail(f"Could not parse yaml in {config_file}: {e}")
+        fail(f"Could not parse yaml in '{config_file}': {e}")
 
     check_config(config)
     env = setup_env()

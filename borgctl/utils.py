@@ -267,3 +267,18 @@ def update_config_sshkey(ssh_key_location: str, config_file: Path) -> None:
             logging.info(f"Updated ssh_key in {config_file}")
     except YAMLError as e:
         fail(f"Could not parse yaml in {config_file}: {e}")
+
+
+def prepare_config_files(cli_config: list | None) -> list[Path]:
+    cli_config_files = ["default.yml", ] if not cli_config else cli_config
+    existing_config_files = []
+
+    for config_file in cli_config_files:
+        if "/" in config_file:
+            config_file = Path(config_file).expanduser()
+        else:
+            config_file = (get_conf_directory() / config_file).expanduser()
+        if not config_file.exists():
+            fail(f"Could not load config '{config_file}'. File does not exist.")
+        existing_config_files.append(config_file)
+    return existing_config_files

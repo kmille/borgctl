@@ -8,7 +8,8 @@ from typing import Any, Tuple, NoReturn
 
 from borgctl.utils import write_state_file, get_conf_directory, \
     load_config, BORG_COMMANDS, fail, get_new_archive_name, \
-    print_docs_url, ask_for_passphrase, ask_for_new_passphrase, init_logging
+    print_docs_url, ask_for_passphrase, ask_for_new_passphrase, \
+    init_logging, prepare_config_files
 
 from borgctl.helper import get_version, show_config_files, \
     generate_ssh_key, generate_authorized_keys, generate_default_config
@@ -174,15 +175,11 @@ def main() -> NoReturn:
         print(f"borgctl v{get_version()}")
         sys.exit(0)
 
-    args.config = ["default.yml", ] if not args.config else args.config
-
     return_code = 0
+
     try:
-        for config_file in args.config:
-            if "/" in config_file:
-                config_file = Path(config_file).expanduser()
-            else:
-                config_file = (get_conf_directory() / config_file).expanduser()
+        config_files = prepare_config_files(args.config)
+        for config_file in config_files:
             env, config = load_config(config_file)
 
             if args.generate_ssh_key:

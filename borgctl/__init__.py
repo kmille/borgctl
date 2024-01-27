@@ -12,7 +12,8 @@ from borgctl.utils import write_state_file, get_conf_directory, \
     init_logging, prepare_config_files
 
 from borgctl.helper import get_version, show_config_files, \
-    generate_ssh_key, generate_authorized_keys, generate_default_config
+    generate_ssh_key, generate_authorized_keys, generate_default_config, \
+    generate_new_passphrase
 
 
 def execute_borg(cmd: list[str], env: dict[str, str]) -> int:
@@ -148,6 +149,9 @@ def parse_arguments() -> Tuple[argparse.ArgumentParser, argparse.Namespace, list
     parser.add_argument("--cron",
                         action="store_true",
                         help="run multiple borg commands in a row. The commands to run are specified in the config file (cron_commands)")
+    parser.add_argument("-p", "--generate-passphrase",
+                        action="store_true",
+                        help="generate a diceware like passphrase")
     parser.add_argument("--version",
                         action="store_true",
                         help="show version and exit")
@@ -171,6 +175,8 @@ def main() -> NoReturn:
         generate_default_config()
     elif args.list:
         show_config_files(args.list)
+    elif args.generate_passphrase:
+        generate_new_passphrase()
     elif args.version:
         print(f"borgctl v{get_version()}")
         sys.exit(0)

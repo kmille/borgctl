@@ -120,3 +120,8 @@ def generate_default_config() -> None:
         default_conf_file.chmod(0o600)
         logging.info(f"Successfully wrote config file to {default_conf_file}")
     sys.exit(0)
+
+
+def generate_new_passphrase() -> None:
+    print(get_passphrase())
+    sys.exit(0)

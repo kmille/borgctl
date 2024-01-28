@@ -84,7 +84,7 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
 
     return_code = execute_borg(cmd, env)
     dry_run_or_help = "--dry-run" in cmd or "-s" in cmd or "--help" in cmd
-    if return_code == 0 and dry_run_or_help:
+    if return_code == 0 and not dry_run_or_help:
         write_state_file(config, config_file, command)
     return return_code
 

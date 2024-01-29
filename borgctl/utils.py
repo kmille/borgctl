@@ -115,14 +115,14 @@ def load_config(config_file: Path) -> Tuple[dict[str, str], dict[str, Any]]:
             "BORG_REPO": config["repository"],
             "BORG_LOGGING_CONF": (get_conf_directory() / "logging.conf").as_posix(),
         }
-        if config["ssh_key"] != "":
-            env.update({
-                "BORG_RSH": f"ssh -i {config['ssh_key']}",
-            })
-            if "BORG_RSH" in config["envs"]:
-                fail("Specifying ssh_key and BORG_RSH clashes. Not supported. Could not apply your BORG_RSH. "
-                     "Please clear ssh_key in the config and specify the ssh key via BORG_RSH (add -i <path ssh key>)")
         env.update(config["envs"])
+
+        if config["ssh_key"] != "":
+            if "BORG_RSH" in config["envs"] and "-i" in config["envs"]["BORG_RSH"]:
+                fail("Specifying a ssh_key in the config file (ssh_config) and in BORG_RSH clashes. "
+                     f"Please update the config:\nBORG_RSH: {config['envs']['BORG_RSH']}\n"
+                     f"config ssh_key: {config['ssh_key']}")
+            env["BORG_RSH"] += f" -i {config['ssh_key']}"
         return env
 
     logging.info(f"\aUsing config file {config_file}")

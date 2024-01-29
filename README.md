@@ -87,6 +87,7 @@ Install the latest package with:
 export LATEST_RELEASE=$(curl -s https://api.github.com/repos/kmille/borgctl/tags | jq -r '.[0].name')
 wget "https://github.com/kmille/borgctl/releases/download/$LATEST_RELEASE/borgctl_$LATEST_RELEASE-1_amd64.deb"
 apt install ./borgctl*.deb
+rm ./borgctl*.deb
 ```
 
 The deb package should work on all Debian based distros. It is created by [create-deb-package.sh](https://github.com/kmille/borgctl/blob/main/contrib/create-deb-package.sh). It requires `borgbackup` and `python3-ruamel.yaml` as dependencies.
@@ -252,6 +253,15 @@ For every borg command, you can add command line parameter/arguments in the conf
 borg_create_arguments:
 - "--one-file-system"
 - "--compression=lz4"
+```
+
+For convenient mounting, I like to use:
+
+```yaml
+borg_mount_arguments:
+- "--strip-components=2"
+- "--foreground"
+- "--last 1"
 ```
 
 #### Specifying an archive

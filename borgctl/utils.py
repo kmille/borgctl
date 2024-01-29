@@ -95,10 +95,10 @@ def check_config(config: dict[str, Any]) -> None:
                 fail(f"'{config_key}' in config file is not a list")
 
     if config["prefix"].strip() == "":
-        fail("The prefix is empty. Must be set.")
+        fail("The prefix in the config file is empty. Must be set.")
 
     if config["repository"].strip() == "":
-        fail("The repository is empty. Must be set.")
+        fail("The repository in the config file is empty. Must be set.")
 
     binary = Path(config["borg_binary"])
     if not binary.exists():
@@ -243,6 +243,7 @@ def update_config_passphrase(passphrase: str, config_file: Path) -> None:
         yaml.dump(config, config_file)
     except YAMLError as e:
         fail(f"Could not parse yaml in {config_file}: {e}")
+    config_file.chmod(0o0600)
     logging.info(f"Updated passphrase in {config_file}")
 
 
@@ -282,5 +283,7 @@ def prepare_config_files(cli_config: list | None) -> list[Path]:
             config_file = (get_conf_directory() / config_file).expanduser()
         if not config_file.exists():
             fail(f"Could not load config '{config_file}'. File does not exist.")
+        if oct(config_file.stat().st_mode) != '0o100600':
+            logging.warning(f"Config file {config_file} has too broad permissions. Please set to 0600")
         existing_config_files.append(config_file)
     return existing_config_files

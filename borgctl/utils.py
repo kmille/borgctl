@@ -205,7 +205,7 @@ def ask_for_passphrase(config: dict[str, Any], env: dict[str, str], command: str
         return env
 
     is_repo_check = command == "check" and "--repository-only" in args
-    if command in ["compact", "umount"] or is_repo_check:
+    if command in ["break-lock", "compact", "umount"] or is_repo_check:
         # no password needed, see https://github.com/borgbackup/borg/discussions/8015
         return env
 

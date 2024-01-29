@@ -122,7 +122,10 @@ def load_config(config_file: Path) -> Tuple[dict[str, str], dict[str, Any]]:
                 fail("Specifying a ssh_key in the config file (ssh_config) and in BORG_RSH clashes. "
                      f"Please update the config:\nBORG_RSH: {config['envs']['BORG_RSH']}\n"
                      f"config ssh_key: {config['ssh_key']}")
-            env["BORG_RSH"] += f" -i {config['ssh_key']}"
+            if "BORG_RSH" in env:
+                env["BORG_RSH"] += f" -i {config['ssh_key']}"
+            else:
+                env["BORG_RSH"] = f"ssh -i {config['ssh_key']}"
         return env
 
     logging.info(f"\aUsing config file {config_file}")

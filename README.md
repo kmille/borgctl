@@ -84,6 +84,7 @@ The source and binary package can also be found on the Release page (*.whl and *
 Install the latest package with:
 
 ```bash
+cd /tmp
 export LATEST_RELEASE=$(curl -s https://api.github.com/repos/kmille/borgctl/tags | jq -r '.[0].name')
 wget "https://github.com/kmille/borgctl/releases/download/$LATEST_RELEASE/borgctl_$LATEST_RELEASE-1_amd64.deb"
 apt install ./borgctl*.deb

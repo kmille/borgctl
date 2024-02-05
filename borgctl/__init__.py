@@ -25,9 +25,9 @@ def execute_borg(cmd: list[str], env: dict[str, str]) -> int:
                           stdout=sys.stdout, stderr=sys.stdout) as p:
         p.wait()
         if p.returncode == 1:
-            logging.warning(f"borg exited with warnings (exit code {p.returncode})")
+            logging.warning(f"Borg exited with warnings (exit code {p.returncode})")
         elif p.returncode > 1:
-            logging.error(f"borg failed with exit code {p.returncode}")
+            logging.error(f"Borg failed with exit code {p.returncode}")
         return p.returncode
 
 
@@ -113,7 +113,6 @@ def run_cron_commands(config: dict[str, Any], env: dict[str, str], config_file: 
         logging.info(f"Running 'borg {command}' in --cron mode")
         ret = run_borg_command(command, env, config, config_file, [])
         return_code = ret if ret > return_code else return_code
-    logging.info(f"Returning with exit code {return_code} for 'borg --cron' with {config_file}")
     return return_code
 
 
@@ -204,6 +203,8 @@ def main() -> NoReturn:
                 return_code = ret if ret > return_code else return_code
             else:
                 parser.print_help()
+        if return_code != 0:
+            logging.warning(f"Returning with exit code {return_code}")
     except KeyboardInterrupt:
         pass
     except Exception as e:

@@ -109,7 +109,7 @@ def check_config(config: dict[str, Any]) -> None:
 
 
 def load_config(config_file: Path) -> Tuple[dict[str, str], dict[str, Any]]:
-    def setup_env():
+    def setup_env() -> dict[str, str]:
         env = {
             "BORG_PASSPHRASE": config["passphrase"],
             "BORG_REPO": config["repository"],
@@ -186,7 +186,7 @@ class=logging.Formatter"""
 
 def get_new_archive_name(config: dict[str, Any]) -> str:
     now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    archive = "::" + config["prefix"] + "_" + now
+    archive = "::" + str(config["prefix"]) + "_" + now
     return archive
 
 
@@ -275,13 +275,13 @@ def update_config_sshkey(ssh_key_location: str, config_file: Path) -> None:
         fail(f"Could not parse yaml in {config_file}: {e}")
 
 
-def prepare_config_files(cli_config: list | None) -> list[Path]:
+def prepare_config_files(cli_config: list[str] | None) -> list[Path]:
     cli_config_files = ["default.yml", ] if not cli_config else cli_config
     existing_config_files = []
 
-    for config_file in cli_config_files:
-        if "/" in config_file:
-            config_file = Path(config_file).expanduser()
+    for config_file_string in cli_config_files:
+        if "/" in config_file_string:
+            config_file = Path(config_file_string).expanduser()
         else:
             config_file = (get_conf_directory() / config_file).expanduser()
         if not config_file.exists():

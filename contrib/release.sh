@@ -57,6 +57,8 @@ function bump_version_prerelease() {
     poetry version prerelease
     VERSION=$(poetry version -s)
     git add ../pyproject.toml && git commit -m "Bump to v$VERSION" --no-verify && git push
+    git tag -m "Bump to v$VERSION" "$VERSION"
+    git push --tags
     gh release create $VERSION --generate-notes --prerelease
 }
 
@@ -65,6 +67,8 @@ function bump_version_prod() {
     poetry version patch
     VERSION=$(poetry version -s)
     git add ../pyproject.toml && git commit -m "Bump to v$VERSION" --no-verify && git push
+    git tag -m "Bump to v$VERSION" "$VERSION"
+    git push --tags
     gh release create $VERSION --generate-notes
 }
 

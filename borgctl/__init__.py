@@ -203,7 +203,8 @@ def main() -> NoReturn:
                 return_code = ret if ret > return_code else return_code
             else:
                 parser.print_help()
-        if return_code != 0:
+        multi_config = len(config_files) > 1
+        if (args.cron or multi_config) and return_code != 0:
             logging.warning(f"Returning with exit code {return_code}")
     except KeyboardInterrupt:
         pass

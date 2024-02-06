@@ -283,7 +283,7 @@ def prepare_config_files(cli_config: list[str] | None) -> list[Path]:
         if "/" in config_file_string:
             config_file = Path(config_file_string).expanduser()
         else:
-            config_file = (get_conf_directory() / config_file).expanduser()
+            config_file = (get_conf_directory() / config_file_string).expanduser()
         if not config_file.exists():
             fail(f"Could not load config '{config_file}'. File does not exist.")
         if oct(config_file.stat().st_mode) != '0o100600':

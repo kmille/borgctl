@@ -1,7 +1,7 @@
 # Maintainer: kmille github@androidloves.me
 
 pkgname=borgctl
-pkgver=0.4.0a5.r85.g9f01206
+pkgver=0.4.0a5.r86.g647f10a
 pkgrel=1
 pkgdesc="borgctl - borgbackup without writing bash scripts"
 arch=('any')

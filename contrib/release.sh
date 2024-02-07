@@ -93,7 +93,7 @@ function create_arch_package() {
 
     makepkg -sf
     gh release upload $VERSION *.tar.zst
-    ./clean.sh
+    make clean
     git add PKGBUILD && git commit -m 'Update sha256sums in PKGBUILD' && git push
     popd > /dev/null
 }

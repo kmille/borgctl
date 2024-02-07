@@ -94,7 +94,7 @@ rm ./borgctl*.deb
 
 The deb package should work on all Debian based distros. It is created by [create-deb-package.sh](https://github.com/kmille/borgctl/blob/main/contrib/create-deb-package.sh). It requires `borgbackup` and `python3-ruamel.yaml` as dependencies.
 
-#### Use the Arch Linux/Manjaro package with
+#### Use the [Arch Linux/Manjaro package](https://aur.archlinux.org/packages/borgctl) with
 
 ```bash
 yay borgctl

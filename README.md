@@ -34,7 +34,7 @@ My [i3](https://i3wm.org/) status bar shows a red `B:7d` if my last backup is 7 
 
 # Quickstart
 
-- TODO: ascinema
+[![asciicast](https://asciinema.org/a/636735.svg)](https://asciinema.org/a/636735)
 
 # Usage
 

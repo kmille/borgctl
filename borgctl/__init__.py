@@ -74,6 +74,10 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
             for word in argument.split():
                 cmd.append(word)
 
+    if command in ("list", "mount", "prune"):
+        cmd.append("--glob-archives")
+        cmd.append(config["prefix"] + "*")
+
     for arg in args:
         cmd.append(arg)
 

@@ -57,10 +57,9 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
             cmd.append(mount_point)
     elif command == "mount" and len(args) == 0:
         # no argument: add :: and mount point to mount all archives
-        if len(args) == 0:
-            cmd.append("::")
-            mount_point = Path(config["mount_point"]).expanduser().as_posix()
-            cmd.append(mount_point)
+        cmd.append("::")
+        mount_point = Path(config["mount_point"]).expanduser().as_posix()
+        cmd.append(mount_point)
     elif command == "export-tar" and "--help" not in args:
         if len(args) < 2:
             fail("The export-tar command needs two arguments (plus optional parameters like --tar-filter): ::archive <outputfile>")
@@ -78,10 +77,15 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
     for arg in args:
         cmd.append(arg)
 
-    if command == "mount" and len(args) > 1:
-        # we need mount after the user supplied options
-        mount_point = Path(config["mount_point"]).expanduser().as_posix()
-        cmd.append(mount_point)
+    # borgctl mount => mount all backups to mount_point # covered above
+    # borgclt mount :: /abc => mount all backups to /abc
+    # borgclt mount /abc => not supported, needs a backup or ::
+    # borgclt mount ::specific-repo => mount specific repo to mount_point
+    if command == "mount" and len(args) == 1:
+        if args[0].startswith("::"):
+            # we need mount_point after the user supplied options like the backup
+            mount_point = Path(config["mount_point"]).expanduser().as_posix()
+            cmd.append(mount_point)
 
     return_code = execute_borg(cmd, env)
     dry_run_or_help = "--dry-run" in cmd or "-s" in cmd or "--help" in cmd

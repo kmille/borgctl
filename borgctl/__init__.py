@@ -67,6 +67,7 @@ def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], 
         if len(args) == 1:
             cmd.append("::")
 
+    # handle borg_create_arguments or borg_prune_arguments, ...
     key_config_file = f"borg_{command}_arguments"
     if key_config_file in config:
         for argument in config[key_config_file]:
@@ -97,11 +98,20 @@ def prepare_borg_create(config: dict[str, Any], cli_arguments: list[str]) -> lis
         arguments.append(f"--exclude={p.as_posix()}")
     arguments.append(get_new_archive_name(config))
 
-    for backup_dir in config["borg_create_backup_dirs"]:
-        p = Path(backup_dir).expanduser()
-        arguments.append(p.as_posix())
-        if not p.exists():
-            logging.warning(f"Backup directory {p} does not exist")
+    # if user supplies backup directories via command line,
+    # do not use the ones specified in config file
+    # check if at least one of the cli arguments does not start with -
+    # it's still possible to use borgctl create --dry-run
+    no_cli_arguments_specified = len(cli_arguments) == 0
+    cli_arguments_specified_and_at_least_one_not_starting_with_a_hyphen = any([not arg.startswith("-") for arg in cli_arguments])
+    if no_cli_arguments_specified or not cli_arguments_specified_and_at_least_one_not_starting_with_a_hyphen:
+        for backup_dir in config["borg_create_backup_dirs"]:
+            p = Path(backup_dir).expanduser()
+            arguments.append(p.as_posix())
+            if not p.exists():
+                logging.warning(f"Backup directory {p} does not exist")
+    else:
+        logging.warning("Only backuping directories specified via command line arguments")
 
     arguments.extend(cli_arguments)
     return arguments

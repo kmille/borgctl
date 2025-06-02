@@ -1,0 +1,1 @@
+There are some breaking changes between 0.4.11 and 0.5.0.  Please check commits  897378a, d20dc4a and 25bec41.

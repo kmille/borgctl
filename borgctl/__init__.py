@@ -24,17 +24,13 @@ def execute_borg(cmd: list[str], env: dict[str, str]) -> int:
     with subprocess.Popen(cmd, env=env, bufsize=1,
                           stdout=sys.stdout, stderr=sys.stdout) as p:
         p.wait()
-        if p.returncode == 1:
-            logging.warning(f"Borg exited with warnings (exit code {p.returncode})")
-        elif p.returncode > 1:
-            logging.error(f"Borg failed with exit code {p.returncode}")
         return p.returncode
 
 
 def run_borg_command(command: str, env: dict[str, str], config: dict[str, Any], config_file: Path, args: list[str]) -> int:
 
     env = ask_for_passphrase(config, env, command, config_file, args)
-    cmd = [config["borg_binary"], "--verbose", command]
+    cmd = [config["borg_binary"], "--verbose", "--show-rc", command]
 
     if command in ("check", "create", "compact"):
         cmd.append("--progress")

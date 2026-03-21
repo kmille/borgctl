@@ -28,8 +28,11 @@ state_commands:
 - "create"
 - "prune"
 
+ignore_return_codes: []
+
 # https://borgbackup.readthedocs.io/en/stable/usage/general.html#environment-variables
 envs:
   "BORG_RELOCATED_REPO_ACCESS_IS_OK": "yes"
+  "BORG_EXIT_CODES": "modern"
 
 borg_binary: "/usr/bin/borg"

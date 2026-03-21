@@ -107,6 +107,12 @@ def check_config(config: dict[str, Any]) -> None:
     if type(config["envs"]) is not dict:
         fail("'envs' in config file is not a dictionary")
 
+    if "ignore_return_codes" in config:
+        if type(config["ignore_return_codes"]) is not list:
+            fail("'ignore_return_code' in config file is not a list")
+        if not all([type(rc) is int for rc in config["ignore_return_codes"]]):
+            fail("Not all values of 'ignore_return_code' list in config file are integers")
+
 
 def load_config(config_file: Path) -> Tuple[dict[str, str], dict[str, Any]]:
     def setup_env() -> dict[str, str]:

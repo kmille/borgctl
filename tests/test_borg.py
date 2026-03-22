@@ -13,6 +13,7 @@ import borgctl
 
 BORG_PASSPHRASE = "123"
 TEST_PREFIX = "borg-pytest-machine"
+OUTPUT_SUCCESS = "terminating with success status, rc 0"
 
 
 class TestRunBorg:
@@ -60,6 +61,8 @@ class TestRunBorg:
         ret = run_borg_command("list", self.env, self.config, self.config_file, ["--json",])
         assert ret == 0
         stdout = capfd.readouterr().out
+        assert OUTPUT_SUCCESS in stdout
+        stdout = stdout.replace(OUTPUT_SUCCESS, "")
         result = loads(stdout)
         assert len(result["archives"]) == 1
         archive = result["archives"][0]
@@ -69,12 +72,16 @@ class TestRunBorg:
         ret = run_borg_command("list", self.env, self.config, self.config_file, ["--json",])
         assert ret == 0
         stdout = capfd.readouterr().out
+        assert OUTPUT_SUCCESS in stdout
+        stdout = stdout.replace(OUTPUT_SUCCESS, "")
         result = loads(stdout)
         assert len(result["archives"]) == 1
         archive = result["archives"][0]
         assert archive["archive"].startswith(TEST_PREFIX)
         ret = run_borg_command("list", self.env, self.config, self.config_file, ["--json-lines", "::" + archive["archive"]])
         stdout = capfd.readouterr().out
+        assert OUTPUT_SUCCESS in stdout
+        stdout = stdout.replace(OUTPUT_SUCCESS, "").strip()
         lines = stdout.splitlines()
         assert len(lines) == 2
         directory = loads(lines[0])

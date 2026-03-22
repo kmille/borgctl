@@ -1,6 +1,6 @@
 [project]
 name = "borgctl"
-version = "0.5.1b1"
+version = "0.5.2"
 description = ""
 authors = [{ name = "kmille", email = "github@androidloves.me" }]
 readme = "README.md"

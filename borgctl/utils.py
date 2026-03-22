@@ -4,6 +4,7 @@ import datetime
 import sys
 from ruamel.yaml import YAML, YAMLError  # type: ignore
 import logging
+from logging.config import fileConfig
 from getpass import getpass
 from typing import Tuple, NoReturn, Any
 
@@ -40,7 +41,7 @@ def init_logging() -> None:
     config_file = get_conf_directory() / "logging.conf"
     if not config_file.exists():
         write_logging_config()
-    logging.config.fileConfig(config_file)
+    fileConfig(config_file)
 
 
 def get_conf_directory() -> Path:
